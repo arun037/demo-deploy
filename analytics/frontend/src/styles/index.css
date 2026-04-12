@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App-level tweaks */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-gray-50 text-brand-navy;
+}
+
+.data-table-container {
+  @apply w-full overflow-x-auto;
+}
+
+.data-table {
+  @apply min-w-full text-xs;
+}
+
+.data-table th {
+  @apply bg-brand-teal/10 px-2 py-1 text-left font-semibold text-brand-navy border-b border-brand-teal/30;
+}
+
+.data-table td {
+  @apply px-2 py-1 border-b border-gray-200 text-brand-navy align-top;
+}
+
+.data-table tr:nth-child(even) {
+  @apply bg-brand-teal/5;
+}
+
+.table-footer {
+  @apply mt-2 text-[11px] text-brand-navy/60;
+}
+
+/* Custom Scrollbar Utilities */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9; 
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1; 
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
+}
+
+/* Shimmer animation for ProcessingModal progress bar */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}

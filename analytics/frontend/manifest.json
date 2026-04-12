@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Data Analytics Platform",
+  "version": "1.0.0",
+  "description": "Analytics chatbot sidebar for business intelligence",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "Toggle Analytics Sidebar",
+    "default_icon": "logo/logo.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar.html", "assets/*", "assets/**/*", "logo/*", "logo/**/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "logo/logo.png",
+    "48": "logo/logo.png",
+    "128": "logo/logo.png"
+  }
+}

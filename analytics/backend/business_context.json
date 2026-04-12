@@ -1,0 +1,1481 @@
+{
+  "business_name": "Franchise Ventures",
+  "version": "1.0",
+  "last_updated": "2026-03-11",
+  "domain_summary": "Franchise ventures is a platform where customers own multiple franchise concepts. Each concept has a contract assigned to it per site, which determines its visibility on search pages.",
+  "kpi_definitions": {
+    "Revenue": "Calculated by summing the 'rpl' column from leads_all_business for successful leads (lead_status = 'SUCCESS'). (Do NOT use contracts.rate for revenue)",
+    "Unique Customers (Network-wide)": "COUNT(DISTINCT gpfv_id) from franchises.customers",
+    "Unique Customers (Single Site)": "COUNT(DISTINCT id) from franchises.customers",
+    "Active visible concepts": "Concepts that have an associated contract in franchises.contracts with status = 3 (Active)."
+  },
+  "business_facts": [
+    "The central date column for leads and revenue reporting is `lead_date` on the `leads_all_business` table.",
+    "The `master_types` table acts as a universal enum lookup table. Joins to it should typically include a condition on `mt.type_category` to prevent duplicate rows for matching IDs.",
+    "A concept's visibility on search pages is determined by whether its associated contract in franchises.contracts has status = 3 (Active). The concepts table status flags are not used for current visibility.",
+    "A single real-world customer may have different customer IDs across sites due to syndication. Their `gpfv_id` remains the same across all sites.",
+    "If a concept is syndicated, it shares the same `fbo_id` across sites. Therefore, a concept's unique identity per site requires joining on BOTH `fbo_id` AND `site_id`.",
+    "Contracts have future dates (future_pause_date, future_restart_date) used to automatically change contract status.",
+    "Contracts with `dayparting = 1` are inactive between 12:00 AM and 8:00 AM.",
+    "Sites are grouped into networks: FON consists of FO, FF, FFS. FCN consists of FCOM, FS. FG and BBN are standalone. This grouping is indicated by the `sites_info.group` column."
+  ],
+  "dashboard": {
+    "description": "Franchise Ventures Premium Analytics Dashboard",
+    "date_filter_column": "lead_date",
+    "date_filter_table": "franchise_new.leads_all_business",
+    "default_time_period": "all",
+    "filter_definitions": {
+      "site": {
+        "param": "site_id",
+        "label": "Site",
+        "type": "select",
+        "options": [
+          {
+            "value": "all",
+            "label": "All Sites"
+          },
+          {
+            "value": "4",
+            "label": "Franchise Gator (FG)"
+          },
+          {
+            "value": "5",
+            "label": "Franchise Opportunities (FO)"
+          },
+          {
+            "value": "6",
+            "label": "Franchise Solutions (FS)"
+          },
+          {
+            "value": "7",
+            "label": "Franchise.com (FCOM)"
+          },
+          {
+            "value": "60",
+            "label": "Food Franchises (FF)"
+          },
+          {
+            "value": "17",
+            "label": "Business Broker (BBN)"
+          }
+        ]
+      },
+      "lead_status": {
+        "param": "lead_status_filter",
+        "label": "Lead Status",
+        "type": "select",
+        "icon": "activity",
+        "options": [
+          {
+            "value": "all",
+            "label": "All Statuses"
+          },
+          {
+            "value": "SUCCESS",
+            "label": "\u2713 Success"
+          },
+          {
+            "value": "FAIL",
+            "label": "\u2717 Failed"
+          },
+          {
+            "value": "DUPLICATE",
+            "label": "= Duplicate"
+          }
+        ]
+      },
+      "lead_category": {
+        "param": "lead_category_filter",
+        "label": "Category",
+        "type": "select",
+        "icon": "layers",
+        "options": [
+          {
+            "value": "all",
+            "label": "All Categories"
+          },
+          {
+            "value": "11",
+            "label": "Food & Beverage"
+          },
+          {
+            "value": "14",
+            "label": "Home Based"
+          },
+          {
+            "value": "17",
+            "label": "Mobile Franchises"
+          },
+          {
+            "value": "4",
+            "label": "Business Opportunities"
+          },
+          {
+            "value": "16",
+            "label": "Low Cost"
+          },
+          {
+            "value": "5",
+            "label": "Business Services"
+          },
+          {
+            "value": "15",
+            "label": "Home Services"
+          },
+          {
+            "value": "12",
+            "label": "Retail"
+          },
+          {
+            "value": "10",
+            "label": "Financial"
+          },
+          {
+            "value": "291",
+            "label": "Veteran's"
+          },
+          {
+            "value": "8",
+            "label": "Computer & IT"
+          },
+          {
+            "value": "7",
+            "label": "Cleaning"
+          },
+          {
+            "value": "23",
+            "label": "Retail Franchises"
+          },
+          {
+            "value": "377",
+            "label": "Women's"
+          },
+          {
+            "value": "1",
+            "label": "Advertising"
+          }
+        ]
+      },
+      "lead_source": {
+        "param": "lead_source_filter",
+        "label": "Lead Source",
+        "type": "select",
+        "icon": "globe",
+        "options": [
+          {
+            "value": "all",
+            "label": "All Sources"
+          },
+          {
+            "value": "WEB",
+            "label": "Web Form"
+          },
+          {
+            "value": "DIRECT",
+            "label": "Direct"
+          },
+          {
+            "value": "EMAIL",
+            "label": "Email Campaign"
+          },
+          {
+            "value": "API",
+            "label": "API / Integration"
+          },
+          {
+            "value": "IMPORT",
+            "label": "Import"
+          }
+        ]
+      }
+    },
+    "visual_theme": {
+      "primary_colors": [
+        "#3b82f6",
+        "#8b5cf6",
+        "#10b981",
+        "#f59e0b",
+        "#ef4444",
+        "#ec4899",
+        "#06b6d4",
+        "#f97316"
+      ],
+      "gradient_enabled": true,
+      "animations_enabled": true,
+      "chart_style": "modern"
+    },
+    "kpi_cards": [
+      {
+        "id": "kpi_total_revenue",
+        "title": "Total Revenue",
+        "description": "Total verified revenue earned from successful leads (lead_status = SUCCESS). Revenue is calculated as the sum of the RPL (Revenue Per Lead) column \u2014 the agreed rate paid per successful lead. Use the Site filter to compare performance by marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "dollar-sign",
+        "color": "#10b981",
+        "show_trend": true,
+        "sql_template": "SELECT ROUND(COALESCE(SUM(rpl), 0), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_total_leads",
+        "title": "Total Leads Generated",
+        "description": "Count of unique successful leads (lead_status = SUCCESS) in the selected period. Each lead represents a consumer who submitted their information through a franchise marketplace site. Filter by Site to compare volume across marketplaces.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "users",
+        "color": "#3b82f6",
+        "show_trend": true,
+        "sql_template": "SELECT COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_lead_conversion_rate",
+        "title": "Lead Conversion Rate",
+        "description": "Percentage of all inbound leads that passed validation and achieved SUCCESS status. A low rate signals issues with data quality, deduplication rules, or lead source relevance. Target: >70%. Filter by site to diagnose individual marketplace conversion health.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "lead_status",
+        "aggregation": "CUSTOM",
+        "filter_conditions": "",
+        "format": "percentage",
+        "icon": "target",
+        "color": "#8b5cf6",
+        "show_trend": true,
+        "sql_template": "SELECT ROUND((COUNT(CASE WHEN lead_status = 'SUCCESS' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)), 2) as total FROM franchise_new.leads_all_business WHERE lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_avg_revenue_per_lead",
+        "title": "Avg Revenue Per Lead (RPL)",
+        "description": "Average RPL across all successful leads in the period. RPL is the contracted rate paid per successful lead delivery. Rising RPL indicates better monetization or a shift toward higher-value franchise categories. Filter by site to benchmark marketplaces.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "AVG",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "trending-up",
+        "color": "#f59e0b",
+        "show_trend": true,
+        "sql_template": "SELECT ROUND(COALESCE(AVG(rpl), 0), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_unique_customers_network",
+        "title": "Unique Customers (Network)",
+        "description": "Total distinct real-world customers across the entire franchise network, identified by gpfv_id which stays consistent even when the same customer appears on multiple sites. An all-time count of true customer reach — not date-filtered since customers accumulate over the life of the platform.",
+        "card_filters": [],
+        "table": "franchises.customers",
+        "date_column": "",
+        "metric_column": "gpfv_id",
+        "aggregation": "COUNT",
+        "filter_conditions": "is_deleted = 0",
+        "format": "number",
+        "icon": "users",
+        "color": "#06b6d4",
+        "show_trend": false,
+        "sql_template": "SELECT COUNT(DISTINCT gpfv_id) as total FROM franchises.customers WHERE is_deleted = 0",
+        "requires_date_filter": false
+      },
+      {
+        "id": "kpi_active_contracts",
+        "title": "Active Contracts",
+        "description": "Contracts currently in Active status (status = 3) with valid start/end dates. Active contracts are the primary revenue engine \u2014 each one controls a franchise concept's visibility on search pages and lead delivery. Filter by site to see active contracts on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "start_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 3 AND is_deleted = 0",
+        "format": "number",
+        "icon": "file-text",
+        "color": "#ec4899",
+        "show_trend": false,
+        "sql_template": "SELECT COUNT(DISTINCT id) as total FROM franchises.contracts WHERE status = 3 AND is_deleted = 0 AND start_date <= CURDATE() AND (end_date IS NULL OR end_date >= CURDATE())",
+        "requires_date_filter": false
+      },
+      {
+        "id": "kpi_active_concepts",
+        "title": "Active Visible Concepts",
+        "description": "Unique franchise concepts that are currently visible on search pages, determined by having an Active contract (status = 3). Each concept represents a franchise brand. Filter by site to see active concept inventory on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "start_date",
+        "metric_column": "concepts_id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 3 AND is_deleted = 0",
+        "format": "number",
+        "icon": "package",
+        "color": "#f97316",
+        "show_trend": false,
+        "sql_template": "SELECT COUNT(DISTINCT concepts_id) as total FROM franchises.contracts WHERE status = 3 AND is_deleted = 0 AND start_date <= CURDATE() AND (end_date IS NULL OR end_date >= CURDATE())",
+        "requires_date_filter": false
+      },
+      {
+        "id": "kpi_daily_lead_velocity",
+        "title": "Daily Lead Velocity",
+        "description": "Average successful leads generated per day in the selected time window. A key operational metric for capacity and staffing planning. Rising velocity with stable conversion rate indicates healthy growth. Use the site filter to benchmark individual marketplace throughput.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "CUSTOM",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "activity",
+        "color": "#3b82f6",
+        "show_trend": true,
+        "sql_template": "SELECT ROUND(COUNT(DISTINCT id) / GREATEST(DATEDIFF(CURDATE(), DATE_SUB(CURDATE(), INTERVAL {period})), 1), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_failed_leads",
+        "title": "Failed Leads",
+        "description": "Leads rejected during validation or processing (lead_status = FAIL). Common causes include missing required fields, invalid contact data, or category mismatches. A sudden spike warrants investigation of the lead source or validation rule changes. Filter by site to pinpoint the problem marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "lead_status = 'FAIL'",
+        "format": "number",
+        "icon": "alert-triangle",
+        "color": "#ef4444",
+        "show_trend": true,
+        "sql_template": "SELECT COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'FAIL' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_duplicate_leads",
+        "title": "Duplicate Leads Blocked",
+        "description": "Leads blocked by the deduplication engine because the same consumer already submitted a lead recently (lead_status = DUPLICATE). High counts are expected from high-traffic sources but should be monitored to ensure deduplication windows are correctly configured per marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "lead_status = 'DUPLICATE'",
+        "format": "number",
+        "icon": "copy",
+        "color": "#94a3b8",
+        "show_trend": true,
+        "sql_template": "SELECT COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'DUPLICATE' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "kpi_total_sites",
+        "title": "Active Sites",
+        "description": "Total number of live franchise marketplace websites with status = 1. Each site operates independently with its own domain, search pages, and lead pipeline. Includes FG, FO, FS, FCOM, FF, BBN and others. This is a platform-level count \u2014 no site filter applies.",
+        "table": "franchises.sites_info",
+        "date_column": "created_date",
+        "metric_column": "site_id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 1",
+        "format": "number",
+        "icon": "globe",
+        "color": "#06b6d4",
+        "show_trend": false,
+        "sql_template": "SELECT COUNT(DISTINCT site_id) as total FROM franchises.sites_info WHERE status = 1",
+        "requires_date_filter": false
+      },
+      {
+        "id": "kpi_paused_contracts",
+        "title": "Paused Contracts",
+        "description": "Contracts currently on hold (status = 4) that are not delivering leads. Paused contracts may be awaiting payment, renewal negotiation, or scheduled future restart (future_restart_date). A high count reduces active inventory and revenue capacity. Filter by site to see pauses per marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "last_update",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 4 AND is_deleted = 0",
+        "format": "number",
+        "icon": "pause-circle",
+        "color": "#f59e0b",
+        "show_trend": false,
+        "sql_template": "SELECT COUNT(DISTINCT id) as total FROM franchises.contracts WHERE status = 4 AND is_deleted = 0",
+        "requires_date_filter": false
+      },
+      {
+        "id": "kpi_total_revenue_per_site_avg",
+        "title": "Avg Revenue Per Site",
+        "description": "Average revenue contribution per franchise marketplace site \u2014 total revenue divided by the count of distinct sites generating leads in the period. Useful for benchmarking site monetization efficiency. Filter by site to see a single site's revenue directly.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "CUSTOM",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "trending-up",
+        "color": "#8b5cf6",
+        "show_trend": true,
+        "sql_template": "SELECT ROUND(COALESCE(SUM(rpl), 0) / NULLIF(COUNT(DISTINCT site_id), 0), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      }
+    ],
+    "trend_charts": [
+      {
+        "id": "trend_revenue_evolution",
+        "title": "Revenue Evolution Over Time",
+        "description": "Monthly revenue trend from successful leads, visualized as a gradient area chart. Each data point is the total RPL sum for that month. Rising slope indicates growth; dips may signal seasonal patterns or campaign gaps. Filter by site to see a single marketplace's revenue trajectory.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "time_grouping": "monthly",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "trending-up",
+        "chart_type": "area",
+        "chart_library": "recharts",
+        "visual_config": {
+          "gradient": true,
+          "smooth": true,
+          "show_dots": false,
+          "color": "#10b981"
+        },
+        "sql_template": "SELECT DATE_FORMAT(lead_date, '%Y-%m') as period, ROUND(COALESCE(SUM(rpl), 0), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period ORDER BY period ASC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "trend_multi_site_revenue",
+        "title": "Multi-Site Revenue Comparison",
+        "description": "Monthly revenue trend for every franchise marketplace site on the same chart \u2014 each site is a separate colored line. Instantly reveals which sites are growing, declining, or stagnant. Use time filter to zoom into short-term shifts or longer historical periods.",
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "time_grouping": "monthly",
+        "group_by": "site_id",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "layers",
+        "chart_type": "multi_line",
+        "chart_library": "recharts",
+        "visual_config": {
+          "multi_series": true,
+          "series_key": "site",
+          "value_key": "total",
+          "colors": [
+            "#3b82f6",
+            "#8b5cf6",
+            "#10b981",
+            "#f59e0b",
+            "#ef4444",
+            "#ec4899"
+          ]
+        },
+        "sql_template": "SELECT DATE_FORMAT(lab.lead_date, '%Y-%m') as period, si.site_name as site, ROUND(COALESCE(SUM(lab.rpl), 0), 2) as total FROM franchise_new.leads_all_business lab JOIN franchises.sites_info si ON lab.site_id = si.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period, si.site_name ORDER BY period ASC, total DESC",
+        "requires_date_filter": true,
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "lab.site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lab.lead_category) > 0"
+          }
+        ]
+      },
+      {
+        "id": "trend_lead_volume_heatmap",
+        "title": "Lead Volume Heatmap by Site \u00d7 Month",
+        "description": "Cross-tabulated heatmap showing lead volume for each site (Y axis) across each month (X axis). Darker cells = higher lead volume. Instantly spot seasonal patterns, site outages, or campaign spikes without scanning row by row. Adjust time period to widen or narrow the view.",
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "time_grouping": "monthly",
+        "group_by": "site_id",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "activity",
+        "chart_type": "heatmap",
+        "chart_library": "plotly",
+        "visual_config": {
+          "x_key": "period",
+          "y_key": "site",
+          "z_key": "total",
+          "colorscale": "Blues"
+        },
+        "sql_template": "SELECT DATE_FORMAT(lab.lead_date, '%Y-%m') as period, si.site_name as site, COUNT(DISTINCT lab.id) as total FROM franchise_new.leads_all_business lab JOIN franchises.sites_info si ON lab.site_id = si.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period, si.site_name ORDER BY period ASC",
+        "requires_date_filter": true,
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "lab.site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lab.lead_category) > 0"
+          }
+        ]
+      },
+      {
+        "id": "trend_revenue_vs_leads",
+        "title": "Revenue vs Leads Correlation",
+        "description": "Overlay of monthly revenue (green) and lead count (blue) on the same time axis. When revenue and leads diverge, it signals RPL changes \u2014 either pricing shifts or a mix change toward higher/lower value categories. Filter by site to investigate correlation for a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "time_grouping": "monthly",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "bar-chart-3",
+        "chart_type": "multi_line",
+        "chart_library": "recharts",
+        "visual_config": {
+          "dual_axis": true,
+          "primary_metric": "revenue",
+          "secondary_metric": "leads",
+          "primary_color": "#10b981",
+          "secondary_color": "#3b82f6"
+        },
+        "sql_template": "SELECT DATE_FORMAT(lead_date, '%Y-%m') as period, ROUND(COALESCE(SUM(rpl), 0), 2) as revenue, COUNT(DISTINCT id) as leads FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period ORDER BY period ASC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "trend_daily_revenue_waterfall",
+        "title": "Revenue Growth Waterfall",
+        "description": "Month-by-month waterfall visualization showing absolute revenue for each period. Green bars = positive revenue months, red = decline months, blue = running total. Excellent for seeing the contribution and magnitude of each month to overall revenue trend. Filter by site to isolate a marketplace's pattern.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "time_grouping": "monthly",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "trending-up",
+        "chart_type": "waterfall_chart",
+        "chart_library": "plotly",
+        "visual_config": {
+          "x_key": "period",
+          "y_key": "total"
+        },
+        "sql_template": "SELECT DATE_FORMAT(lead_date, '%Y-%m') as period, ROUND(COALESCE(SUM(rpl), 0), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period ORDER BY period ASC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "trend_daily_leads_bar",
+        "title": "Daily Lead Volume",
+        "description": "Day-by-day successful lead count as a bar chart. Ideal for spotting weekend vs weekday patterns, campaign launch spikes, and outage gaps. Use short time periods (7\u201330 days) for granular daily insight, or longer periods to see weekly patterns. Filter by site for marketplace-level daily detail.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          },
+          {
+            "filter_ref": "lead_source",
+            "sql_fragment": "lead_source = '{value}'"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "time_grouping": "daily",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "bar-chart",
+        "chart_type": "bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "gradient": true,
+          "color": "#3b82f6",
+          "x_key": "period",
+          "y_key": "total"
+        },
+        "sql_template": "SELECT DATE_FORMAT(lead_date, '%Y-%m-%d') as period, COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period ORDER BY period ASC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "trend_rpl_over_time",
+        "title": "Avg RPL Trend Over Time",
+        "description": "Monthly trend of average Revenue Per Lead (RPL) for successful leads. Rising RPL means higher average contract rates \u2014 positive pricing signal. Falling RPL may indicate more lower-value leads coming through or a category mix shift. Filter by site to benchmark RPL per marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "rpl",
+        "aggregation": "AVG",
+        "time_grouping": "monthly",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "dollar-sign",
+        "chart_type": "line",
+        "chart_library": "recharts",
+        "visual_config": {
+          "smooth": true,
+          "color": "#10b981",
+          "show_dots": true,
+          "gradient": false
+        },
+        "sql_template": "SELECT DATE_FORMAT(lead_date, '%Y-%m') as period, ROUND(AVG(rpl), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY period ORDER BY period ASC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "trend_failed_vs_success_stacked",
+        "title": "Lead Success vs Failure Trend",
+        "description": "Multi-line chart showing monthly counts for SUCCESS, FAIL, and DUPLICATE lead statuses simultaneously. The ratio between lines reveals processing health. A widening gap between SUCCESS and FAIL is ideal. Sudden FAIL spikes indicate validation or integration issues. Filter by site to diagnose a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "time_grouping": "monthly",
+        "filter_conditions": "",
+        "format": "number",
+        "icon": "activity",
+        "chart_type": "multi_line",
+        "chart_library": "recharts",
+        "visual_config": {
+          "multi_series": true,
+          "series_key": "lead_status",
+          "value_key": "total",
+          "colors": [
+            "#10b981",
+            "#ef4444",
+            "#f59e0b"
+          ]
+        },
+        "sql_template": "SELECT DATE_FORMAT(lead_date, '%Y-%m') as period, lead_status as lead_status, COUNT(*) as total FROM franchise_new.leads_all_business WHERE lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) AND lead_status IN ('SUCCESS','FAIL','DUPLICATE') GROUP BY period, lead_status ORDER BY period ASC",
+        "requires_date_filter": true
+      }
+    ],
+    "distribution_charts": [
+      {
+        "id": "dist_revenue_by_site_treemap",
+        "title": "Revenue Distribution by Site",
+        "description": "Treemap where each rectangle represents a franchise marketplace site. Rectangle size and color intensity are proportional to that site's total revenue. Instantly reveals which sites dominate revenue and which are underperforming. Larger, darker cells = more revenue. Use time filter to compare seasonal contributions.",
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "site_id",
+        "category_join_table": "franchises.sites_info",
+        "category_join_column": "site_id",
+        "category_display_column": "site_name",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "limit": 15,
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "currency",
+        "icon": "layers",
+        "chart_type": "treemap",
+        "chart_library": "plotly",
+        "visual_config": {
+          "x_key": "category",
+          "y_key": "total",
+          "colorscale": "Viridis"
+        },
+        "sql_template": "SELECT si.site_name as category, ROUND(COALESCE(SUM(lab.rpl), 0), 2) as total FROM franchise_new.leads_all_business lab JOIN franchises.sites_info si ON lab.site_id = si.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY si.site_name ORDER BY total DESC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_leads_by_category_funnel",
+        "title": "Lead Funnel by Category",
+        "description": "Funnel chart ranking franchise categories (Food, Retail, Services, etc.) by lead volume. The widest segment is the most popular category. Narrowing segments reveal less explored niches. Filter by site to see which categories are prominent on specific marketplaces.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "lab.site_id = {value}"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "category_id",
+        "category_join_table": "franchises.sites_categories",
+        "category_join_conditions": "sc.category_id = lab.category_id AND sc.site_id = lab.site_id",
+        "category_display_column": "category_name",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "limit": 8,
+        "filter_conditions": "lead_status = 'SUCCESS' AND category_id != '0'",
+        "format": "number",
+        "icon": "filter",
+        "chart_type": "funnel_chart",
+        "chart_library": "plotly",
+        "visual_config": {
+          "x_key": "category",
+          "y_key": "total"
+        },
+        "sql_template": "SELECT sc.category_name as category, COUNT(DISTINCT lab.id) as total FROM franchise_new.leads_all_business lab JOIN franchises.sites_categories sc ON sc.category_id = lab.category_id AND sc.site_id = lab.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.category_id != '0' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY sc.category_name ORDER BY total DESC LIMIT 8",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_revenue_by_state_horizontal",
+        "title": "Top States by Revenue",
+        "description": "Ranked horizontal bar chart of US states by total revenue from successful leads. Reveals geographic concentration of franchise interest. Top states often correlate with high franchise density (CA, TX, FL, NY). Filter by site to see the geographic footprint of a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "state_name",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "limit": 15,
+        "filter_conditions": "lead_status = 'SUCCESS' AND state_name IS NOT NULL AND state_name != ''",
+        "format": "currency",
+        "icon": "map",
+        "chart_type": "horizontal_bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "orientation": "horizontal",
+          "gradient": true,
+          "color": "#3b82f6"
+        },
+        "sql_template": "SELECT state_name as category, ROUND(COALESCE(SUM(rpl), 0), 2) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND state_name IS NOT NULL AND state_name != '' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY state_name ORDER BY total DESC LIMIT 15",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_revenue_by_category_grouped",
+        "title": "Revenue by Category & Site",
+        "description": "Grouped bar chart comparing revenue contribution of each franchise category (X axis) broken down by site (color groups). Shows which categories drive the most revenue on each site \u2014 useful for identifying category strength per marketplace and cross-site category strategy. Filter by site to focus on a single marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "lab.site_id = {value}"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "category_id",
+        "category_join_table": "franchises.sites_categories",
+        "category_join_conditions": "sc.category_id = lab.category_id AND sc.site_id = lab.site_id",
+        "category_display_column": "category_name",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "group_by": "site_id",
+        "limit": 10,
+        "filter_conditions": "lead_status = 'SUCCESS' AND category_id != '0'",
+        "format": "currency",
+        "icon": "bar-chart-3",
+        "chart_type": "grouped_bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "group_by": "site",
+          "multi_series": true,
+          "colors": [
+            "#3b82f6",
+            "#8b5cf6",
+            "#10b981",
+            "#f59e0b"
+          ]
+        },
+        "sql_template": "SELECT sc.category_name as category, si.site_name as site, ROUND(COALESCE(SUM(lab.rpl), 0), 2) as total FROM franchise_new.leads_all_business lab JOIN franchises.sites_categories sc ON sc.category_id = lab.category_id AND sc.site_id = lab.site_id JOIN franchises.sites_info si ON lab.site_id = si.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.category_id != '0' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY sc.category_name, si.site_name ORDER BY total DESC LIMIT 50",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_lead_source_pie",
+        "title": "Lead Source Distribution",
+        "description": "Pie chart of successful leads by lead source channel (WEB, APP, FBO_WEB, etc.). Shows which acquisition channel is driving the most leads. Organic web (WEB) typically dominates, while APP leads indicate mobile engagement. Filter by site to see channel mix per marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "lead_source",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "limit": 6,
+        "filter_conditions": "lead_status = 'SUCCESS' AND lead_source IS NOT NULL AND lead_source != ''",
+        "format": "number",
+        "icon": "pie-chart",
+        "chart_type": "pie",
+        "chart_library": "recharts",
+        "visual_config": {
+          "show_percentages": true,
+          "donut": false
+        },
+        "sql_template": "SELECT lead_source as category, COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND lead_source IS NOT NULL AND lead_source != '' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY lead_source ORDER BY total DESC LIMIT 6",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_utm_source_bubble",
+        "title": "Marketing Channel Performance",
+        "description": "Bubble chart of UTM source channels. X axis = lead count, Y axis = total revenue, bubble size = revenue. Channels in the top-right with large bubbles are high-volume and high-revenue stars. Small bubbles bottom-left are emerging or low-value channels. Filter by site to see channel performance on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          },
+          {
+            "filter_ref": "lead_source",
+            "sql_fragment": "lead_source = '{value}'"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "new_utm_source",
+        "metric_column": "rpl",
+        "aggregation": "SUM",
+        "limit": 12,
+        "filter_conditions": "lead_status = 'SUCCESS' AND new_utm_source IS NOT NULL AND new_utm_source != ''",
+        "format": "currency",
+        "icon": "target",
+        "chart_type": "bubble_chart",
+        "chart_library": "plotly",
+        "visual_config": {
+          "x_key": "leads",
+          "y_key": "revenue",
+          "size_key": "revenue",
+          "color_key": "category"
+        },
+        "sql_template": "SELECT new_utm_source as category, COUNT(DISTINCT id) as leads, ROUND(COALESCE(SUM(rpl), 0), 2) as revenue FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND new_utm_source IS NOT NULL AND new_utm_source != '' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY new_utm_source ORDER BY revenue DESC LIMIT 12",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_sales_rep_performance",
+        "title": "Sales Rep Lead Performance",
+        "description": "Ranked horizontal bar chart showing how many successful leads each sales representative's contracts received in the period. A sales rep's performance is indirect \u2014 they own the contracts which determine lead delivery. Top reps indicate well-managed, actively-monitored contracts. Filter by site to see rep performance on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "lab.site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lab.lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "sales_reps_id",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "limit": 15,
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "users",
+        "color": "#8b5cf6",
+        "chart_type": "horizontal_bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "orientation": "horizontal",
+          "gradient": true,
+          "color": "#8b5cf6"
+        },
+        "sql_template": "SELECT CONCAT(sr.first_name, ' ', sr.last_name) as category, COUNT(DISTINCT lab.id) as total FROM franchise_new.leads_all_business lab JOIN franchises.contracts c ON c.id = lab.contracts_id JOIN franchises.sales_reps sr ON sr.id = c.sales_reps_id WHERE lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) AND sr.is_deleted = 0 GROUP BY sr.id, sr.first_name, sr.last_name ORDER BY total DESC LIMIT 15",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_contract_status_distribution",
+        "title": "Contract Status Distribution",
+        "description": "Donut chart of all contracts segmented by lifecycle status: Active (delivering leads), Paused (on hold), Pending (not yet started), Expired, and Cancelled. A healthy portfolio has a large Active slice. Growing Paused or Cancelled slices signal retention issues. Filter by site to see portfolio health per marketplace. This is an all-time metric — contracts accumulate over the platform's lifetime.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "c.site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "",
+        "category_column": "status",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "is_deleted = 0",
+        "format": "number",
+        "icon": "file-text",
+        "chart_type": "pie",
+        "chart_library": "recharts",
+        "visual_config": {
+          "show_percentages": true,
+          "donut": true,
+          "colors": [
+            "#10b981",
+            "#f59e0b",
+            "#ef4444",
+            "#94a3b8"
+          ]
+        },
+        "sql_template": "SELECT CASE c.status WHEN 1 THEN 'Pending' WHEN 2 THEN 'Inactive' WHEN 3 THEN 'Active' WHEN 4 THEN 'Paused' WHEN 5 THEN 'Expired' WHEN 6 THEN 'Cancelled' ELSE CONCAT('Status ', c.status) END as category, COUNT(DISTINCT c.id) as total FROM franchises.contracts c WHERE c.is_deleted = 0 GROUP BY c.status ORDER BY total DESC",
+        "requires_date_filter": false
+      },
+      {
+        "id": "dist_top_concepts_by_leads",
+        "title": "Top 10 Concepts by Lead Volume",
+        "description": "The 10 franchise concepts (brands) that attracted the most successful leads in the selected period. High lead volume concepts are most appealing to prospective franchisees. Use this to identify which brands are generating the most consumer interest and to prioritize sales efforts. Filter by site to see top concepts on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "lab.site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lab.lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "fbo_id",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "limit": 10,
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "package",
+        "color": "#06b6d4",
+        "chart_type": "horizontal_bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "orientation": "horizontal",
+          "gradient": true,
+          "color": "#06b6d4"
+        },
+        "sql_template": "SELECT con.name as category, COUNT(DISTINCT lab.id) as total FROM franchise_new.leads_all_business lab JOIN franchises.concepts con ON con.fbo_id = lab.fbo_id AND con.site_id = lab.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) AND con.is_deleted = 0 GROUP BY con.name ORDER BY total DESC LIMIT 10",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_lead_status_breakdown",
+        "title": "Lead Status Breakdown",
+        "description": "Pie chart of all lead processing outcomes in the period: SUCCESS (converted), FAIL (rejected), DUPLICATE (blocked), and other statuses. The SUCCESS slice should dominate a healthy system. A large FAIL slice indicates validation problems; a large DUPLICATE slice signals repeat visitor traffic. Filter by site to diagnose a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "lead_status",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "",
+        "format": "number",
+        "icon": "pie-chart",
+        "chart_type": "pie",
+        "chart_library": "recharts",
+        "visual_config": {
+          "show_percentages": true,
+          "donut": false,
+          "colors": [
+            "#10b981",
+            "#ef4444",
+            "#f59e0b",
+            "#8b5cf6",
+            "#94a3b8"
+          ]
+        },
+        "sql_template": "SELECT lead_status as category, COUNT(*) as total FROM franchise_new.leads_all_business WHERE lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY lead_status ORDER BY total DESC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_leads_by_site_bar",
+        "title": "Leads Generated Per Site",
+        "description": "Bar chart comparing total successful lead volume for each franchise marketplace site in the selected period. The tallest bar is the highest-performing lead generation site. Use this for site-level volume benchmarking and to identify sites that may need traffic or conversion optimization.",
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "site_id",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "lead_status = 'SUCCESS'",
+        "format": "number",
+        "icon": "bar-chart",
+        "color": "#3b82f6",
+        "chart_type": "bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "gradient": true,
+          "color": "#3b82f6"
+        },
+        "sql_template": "SELECT si.site_name as category, COUNT(DISTINCT lab.id) as total FROM franchise_new.leads_all_business lab JOIN franchises.sites_info si ON lab.site_id = si.site_id WHERE lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY si.site_name ORDER BY total DESC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_device_type",
+        "title": "Device Type Distribution",
+        "description": "Donut chart of leads segmented by browser/device type. Shows the share of Desktop, Mobile, iOS app, and Android app traffic. High mobile share may justify mobile-first page optimization. Filter by site to see device preferences of users on specific marketplaces.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_source",
+            "sql_fragment": "lead_source = '{value}'"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "browser_type",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "lead_status = 'SUCCESS' AND browser_type IS NOT NULL AND browser_type != ''",
+        "format": "number",
+        "icon": "layers",
+        "chart_type": "pie",
+        "chart_library": "recharts",
+        "visual_config": {
+          "show_percentages": true,
+          "donut": true,
+          "colors": [
+            "#3b82f6",
+            "#8b5cf6",
+            "#10b981",
+            "#f59e0b",
+            "#ef4444"
+          ]
+        },
+        "sql_template": "SELECT COALESCE(browser_type, 'Unknown') as category, COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND browser_type IS NOT NULL AND browser_type != '' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY browser_type ORDER BY total DESC",
+        "requires_date_filter": true
+      },
+      {
+        "id": "dist_active_contracts_by_site",
+        "title": "Active Contracts Per Site",
+        "description": "Bar chart showing the count of currently Active (status = 3) contracts on each franchise marketplace site. Sites with more active contracts have larger franchise concept inventory and more lead delivery capacity. Disparities highlight sites that may be under-inventoried.",
+        "table": "franchises.contracts",
+        "date_column": "start_date",
+        "category_column": "site_id",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 3 AND is_deleted = 0",
+        "format": "number",
+        "icon": "file-text",
+        "color": "#10b981",
+        "chart_type": "bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "gradient": true,
+          "color": "#10b981"
+        },
+        "sql_template": "SELECT si.site_name as category, COUNT(DISTINCT c.id) as total FROM franchises.contracts c JOIN franchises.sites_info si ON c.site_id = si.site_id WHERE c.status = 3 AND c.is_deleted = 0 GROUP BY si.site_name ORDER BY total DESC",
+        "requires_date_filter": false
+      },
+      {
+        "id": "dist_utm_medium_performance",
+        "title": "Marketing Medium Performance",
+        "description": "Bar chart of successful lead volume segmented by UTM medium (CPC, Organic, Email, Social, Display, etc.). Identifies which paid and organic channels are delivering the most leads. Combine with UTM source bubble chart for a full channel attribution picture. Filter by site to see medium performance on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          },
+          {
+            "filter_ref": "lead_source",
+            "sql_fragment": "lead_source = '{value}'"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "category_column": "new_utm_medium",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "limit": 10,
+        "filter_conditions": "lead_status = 'SUCCESS' AND new_utm_medium IS NOT NULL AND new_utm_medium != ''",
+        "format": "number",
+        "icon": "target",
+        "chart_type": "bar",
+        "chart_library": "recharts",
+        "visual_config": {
+          "gradient": true,
+          "color": "#f59e0b"
+        },
+        "sql_template": "SELECT new_utm_medium as category, COUNT(DISTINCT id) as total FROM franchise_new.leads_all_business WHERE lead_status = 'SUCCESS' AND new_utm_medium IS NOT NULL AND new_utm_medium != '' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}) GROUP BY new_utm_medium ORDER BY total DESC LIMIT 10",
+        "requires_date_filter": true
+      }
+    ],
+    "alert_cards": [
+      {
+        "id": "alert_failed_leads_gauge",
+        "title": "Lead Failure Rate",
+        "description": "Live gauge of the percentage of leads that failed validation in the selected period. Green zone (<20%) = healthy. Yellow (20\u201340%) = investigate lead sources. Red (>40%) = critical \u2014 check validation rules or integration feeds. Filter by site to identify which marketplace has a failure rate problem.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "lead_status",
+        "aggregation": "CUSTOM",
+        "filter_conditions": "",
+        "format": "percentage",
+        "icon": "gauge",
+        "chart_type": "gauge",
+        "chart_library": "plotly",
+        "visual_config": {
+          "max_value": 100,
+          "thresholds": [
+            20,
+            40,
+            60
+          ]
+        },
+        "sql_template": "SELECT ROUND((COUNT(CASE WHEN lead_status = 'FAIL' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)), 2) as count FROM franchise_new.leads_all_business WHERE lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "alert_paused_contracts",
+        "title": "Paused Contracts Alert",
+        "description": "Count of contracts in Paused state (status = 4) right now. Paused contracts represent frozen revenue \u2014 they have active pricing but are not delivering leads. Each paused contract is a potential churn risk. Review paused contracts with future_restart_date set to plan reactivation outreach. Filter by site to see paused contracts on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "last_update",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 4 AND is_deleted = 0",
+        "format": "number",
+        "icon": "pause-circle",
+        "color": "#ef4444",
+        "sql_template": "SELECT COUNT(DISTINCT id) as count FROM franchises.contracts WHERE status = 4 AND is_deleted = 0",
+        "requires_date_filter": false
+      },
+      {
+        "id": "alert_failed_leads_count",
+        "title": "Failed Leads Count",
+        "description": "Absolute count of failed leads in the selected period. Unlike the failure rate gauge, this shows raw volume \u2014 useful when a high-traffic site has many failures in absolute terms even if the rate is low. Any increase from prior periods warrants investigation of the lead intake pipeline. Filter by site to pinpoint the source.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "lead_status = 'FAIL'",
+        "format": "number",
+        "icon": "alert-triangle",
+        "color": "#f59e0b",
+        "sql_template": "SELECT COUNT(DISTINCT id) as count FROM franchise_new.leads_all_business WHERE lead_status = 'FAIL' AND lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "alert_contracts_near_cap",
+        "title": "Contracts Near Monthly Cap",
+        "description": "Active contracts that have consumed 80%+ of their monthly lead cap and are at risk of stopping lead delivery before month end. Each such contract needs a cap review or proactive upsell conversation. A high count means significant revenue is about to be left on the table. Filter by site to prioritize cap reviews per marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "last_update",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 3 AND is_deleted = 0 AND monthly_cap > 0",
+        "format": "number",
+        "icon": "alert-circle",
+        "color": "#f59e0b",
+        "sql_template": "SELECT COUNT(DISTINCT id) as count FROM franchises.contracts WHERE status = 3 AND is_deleted = 0 AND monthly_cap > 0 AND (current_month_leads * 100.0 / monthly_cap) >= 80",
+        "requires_date_filter": false
+      },
+      {
+        "id": "alert_duplicate_rate_gauge",
+        "title": "Duplicate Lead Rate",
+        "description": "Gauge showing what percentage of all inbound leads were blocked as duplicates in the period. Values under 10% are normal for organic traffic. 10\u201325% indicates some list recycling. Above 25% suggests a lead source is sending repeat submissions and deduplication windows may need tightening. Filter by site to identify the problem source.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          },
+          {
+            "filter_ref": "lead_category",
+            "sql_fragment": "FIND_IN_SET('{value}', lead_category) > 0"
+          }
+        ],
+        "table": "franchise_new.leads_all_business",
+        "date_column": "lead_date",
+        "metric_column": "lead_status",
+        "aggregation": "CUSTOM",
+        "filter_conditions": "",
+        "format": "percentage",
+        "icon": "copy",
+        "chart_type": "gauge",
+        "chart_library": "plotly",
+        "visual_config": {
+          "max_value": 100,
+          "thresholds": [
+            10,
+            25,
+            50
+          ]
+        },
+        "sql_template": "SELECT ROUND((COUNT(CASE WHEN lead_status = 'DUPLICATE' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)), 2) as count FROM franchise_new.leads_all_business WHERE lead_date >= DATE_SUB(CURDATE(), INTERVAL {period})",
+        "requires_date_filter": true
+      },
+      {
+        "id": "alert_contracts_expiring_soon",
+        "title": "Contracts Expiring in 30 Days",
+        "description": "Active contracts with an end_date within the next 30 days. These represent imminent revenue loss if not renewed. Sales teams should proactively contact these accounts for renewal discussions. A high count in this alert indicates a renewal pipeline that needs immediate attention. Filter by site to prioritize outreach per marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "end_date",
+        "metric_column": "id",
+        "aggregation": "COUNT",
+        "filter_conditions": "status = 3 AND is_deleted = 0 AND end_date IS NOT NULL",
+        "format": "number",
+        "icon": "clock",
+        "color": "#f97316",
+        "sql_template": "SELECT COUNT(DISTINCT id) as count FROM franchises.contracts WHERE status = 3 AND is_deleted = 0 AND end_date IS NOT NULL AND end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)",
+        "requires_date_filter": false
+      },
+      {
+        "id": "alert_zero_lead_contracts",
+        "title": "Zero-Lead Active Contracts",
+        "description": "Active contracts (status = 3) that received zero successful leads in the selected period. These are paying clients receiving no value. Likely causes: dayparting restriction, cap already hit, category mismatch, or low site traffic for that concept's niche. Each zero-lead contract is a churn risk. Filter by site to focus on a specific marketplace.",
+        "card_filters": [
+          {
+            "filter_ref": "site",
+            "sql_fragment": "c.site_id = {value}"
+          }
+        ],
+        "table": "franchises.contracts",
+        "date_column": "start_date",
+        "metric_column": "id",
+        "aggregation": "CUSTOM",
+        "filter_conditions": "status = 3 AND is_deleted = 0",
+        "format": "number",
+        "icon": "alert-triangle",
+        "color": "#ef4444",
+        "sql_template": "SELECT COUNT(DISTINCT c.id) as count FROM franchises.contracts c WHERE c.status = 3 AND c.is_deleted = 0 AND NOT EXISTS (SELECT 1 FROM franchise_new.leads_all_business lab WHERE lab.contracts_id = c.id AND lab.lead_status = 'SUCCESS' AND lab.lead_date >= DATE_SUB(CURDATE(), INTERVAL {period}))",
+        "requires_date_filter": true
+      }
+    ],
+    "date_filter_periods": {
+      "7d": "7 DAY",
+      "30d": "30 DAY",
+      "3m": "3 MONTH",
+      "6m": "6 MONTH",
+      "12m": "12 MONTH",
+      "all": "100 YEAR"
+    },
+    "advanced_visualizations": {
+      "enabled": true,
+      "chart_libraries": {
+        "plotly": [
+          "treemap",
+          "heatmap",
+          "funnel_chart",
+          "waterfall_chart",
+          "bubble_chart",
+          "gauge",
+          "histogram"
+        ],
+        "recharts": [
+          "line",
+          "area",
+          "bar",
+          "pie",
+          "scatter",
+          "multi_line",
+          "multi_bar",
+          "grouped_bar",
+          "horizontal_bar"
+        ]
+      },
+      "default_styling": {
+        "gradient_fills": true,
+        "smooth_curves": true,
+        "animations": true,
+        "color_scheme": "vibrant",
+        "chart_height": 400
+      }
+    },
+    "notes": [
+      "ALL cards MUST include date filtering when requires_date_filter is true",
+      "Date filter column is lead_date from franchise_new.leads_all_business for lead/revenue metrics",
+      "Use activation_date for customer metrics, start_date for contract metrics",
+      "Always use COALESCE to handle NULL values in aggregations",
+      "Join to sites_info using site_id (not id) for site names",
+      "Join to sites_categories using both category_id AND site_id for category names",
+      "Filter out deleted records (is_deleted = 0) where applicable",
+      "For revenue calculations, ALWAYS filter by lead_status = 'SUCCESS'",
+      "Chart types: Use 'treemap', 'heatmap', 'funnel_chart', 'waterfall_chart', 'bubble_chart', 'gauge' for Plotly advanced charts",
+      "Chart types: Use 'line', 'area', 'bar', 'pie', 'multi_line', 'grouped_bar', 'horizontal_bar' for Recharts standard charts",
+      "visual_config section allows fine-tuning of chart appearance (gradients, colors, animations)",
+      "All SQL templates use {period} placeholder which gets replaced with actual period (7 DAY, 30 DAY, etc.)"
+    ]
+  }
+}

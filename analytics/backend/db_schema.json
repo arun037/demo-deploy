@@ -1,0 +1,1669 @@
+[
+  {
+    "table_name": "sites_info",
+    "database_name": "franchises",
+    "purpose": "Site Registry — Stores configuration for each franchise marketplace website. Sites are grouped into networks: FG (Franchise Gator, standalone), FON (Franchise Opportunities Network: FO, FF, FFS), FCN (Franchise.com Network: FCOM, FS), and BBN (Business Broker Network). Each site has its own search pages, concept listings, categories, and lead origin tracking. The `group` column identifies which network a site belongs to. CRITICAL JOIN RULE: other tables join to sites_info.site_id — NOT to sites_info.id. SITE LOOKUP: when a user mentions a site by name (e.g. 'Franchise Gator', 'FG', 'Food Franchise', 'Franchise.com'), join this table and filter by site_name or site_abbr — never hardcode a site_id. No is_deleted column — all rows are always valid.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Auto-increment internal primary key for this table only. NOT the join target — do NOT use this column when joining from contracts, customers, leads, or concepts. All other tables join to sites_info.site_id, not this id."
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "The canonical site identifier used across the ENTIRE system. All other tables with a site_id column (contracts, customers, concepts, leads_all_business, sales_reps, sites_categories) JOIN to THIS column — NOT to sites_info.id. Always join on franchises.sites_info.site_id. Known values: 4=FG (Franchise Gator), 5=FO (Franchise Opportunities), 6=FS (Franchise Solutions), 7=FCOM (Franchise.com), 60=FF (Food Franchises), 17=BBN (Business Broker). When a user mentions a site by name, filter by site_name or site_abbr from this table."
+      },
+      {
+        "name": "site_name",
+        "type": "varchar(45)",
+        "description": "Name of the site stored in the system. This value identifies the website associated with the record. It is used in administrative views and reporting. (Examples: Franchise Gator, Food Franchises, Franchise.com)",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "site_abbr",
+        "type": "varchar(45)",
+        "description": "Short abbreviated form of the site name used in configuration and internal references. FG = Franchise Gator, FO = Franchise Opportunities, FS = Franchise Solutions, FCOM = Franchise.com, FF = Food Franchise, FFS = Franchise For Sale, BBN = Business Broker Network.",
+        "example_values": [
+          "FG",
+          "FO",
+          "FS",
+          "FCOM",
+          "BBN",
+          "FFS",
+          "FF",
+          "AUTO",
+          "FCOST",
+          "VF"
+        ]
+      },
+      {
+        "name": "group",
+        "type": "varchar(45)",
+        "description": "Network grouping for the site. FG = Franchise Gator (standalone network). FON = Franchise Opportunities Network (parent of FO, FF, FFS). FCN = Franchise.com Network (parent of FCOM, FS). BBN = Business Broker Network (standalone). MYAC = MyAccount platform. Use this column when filtering or grouping sites by their network rather than individually.",
+        "example_values": [
+          "FG",
+          "FON",
+          "FCN",
+          "FV",
+          "MYAC"
+        ]
+      },
+      {
+        "name": "site_url",
+        "type": "varchar(45)",
+        "description": "Web address associated with the site. Identifies the actual domain where the site is accessible. (Examples: franchise.com, franchisegator.com)"
+      },
+      {
+        "name": "web_interval",
+        "type": "int",
+        "description": "Defines the interval used for organic web leads. Applied when managing organic web lead generation timing."
+      },
+      {
+        "name": "app_interval",
+        "type": "int",
+        "description": "Defines the interval used for leads generated through the mobile application."
+      },
+      {
+        "name": "web_paid_interval",
+        "type": "int",
+        "description": "Defines the interval used for paid web leads. Applied when managing leads generated from paid web campaigns."
+      },
+      {
+        "name": "send_message",
+        "type": "int",
+        "description": "Indicates whether a monitoring message should be sent when no leads are received for a period. If 1, a cron checks and sends an email when no leads are generated in the last two hours."
+      },
+      {
+        "name": "synd_organic",
+        "type": "int",
+        "description": "Indicates whether the site participates in organic lead syndication. If 1, the site is allowed to receive syndicated organic leads."
+      },
+      {
+        "name": "lead_form",
+        "type": "int",
+        "description": "Indicates whether the lead capture form is enabled and active for this site. 1 = lead form is active and receiving leads on this site. This controls whether search pages on the site allow prospects to submit inquiries."
+      },
+      {
+        "name": "TTL",
+        "type": "int",
+        "description": "Time-to-live value in seconds for cached site configuration data. Controls how long site configuration is cached before being refreshed from the database. This is an internal system setting and not relevant to lead or revenue reporting."
+      }
+    ]
+  },
+  {
+    "table_name": "customers",
+    "database_name": "franchises",
+    "purpose": "Customer Accounts — Stores the advertiser or brand owner (franchise customer) who owns concepts and contracts.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [
+      {
+        "column": "site_id",
+        "references": "franchises.sites_info(site_id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "status",
+        "references": "franchises.master_types(id)",
+        "cardinality": "N:1"
+      }
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Primary key for the customer record. Site-specific — UNIQUE ONLY WITHIN A SINGLE SITE. Do NOT use for cross-site aggregation. Every advertiser or brand owner is identified using this value. Concepts and contracts belonging to the customer reference this id. For cross-site aggregation, use gpfv_id instead."
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "Identifies the site where the customer record was originally created. References franchises.sites_info.site_id. Even though the customer may appear across multiple sites through syndication, this field shows the originating site for that record.",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "varchar(256)",
+        "description": "Display name or company name of the customer. This is the brand name used internally in admin tools, reports, and contract screens. Represents the advertiser who owns concepts and receives leads. (Examples: VR Business Brokers, ERA Bell Mountain Properties)",
+        "example_values": [
+          "1 Coffee Source",
+          "1 Stop Pool Pros",
+          "1-1Jobs/National Hospitality Recruiting, Inc.",
+          "1-2-3 Dollar",
+          "1-800 Flowers Franchising",
+          "1-800-DryClean",
+          "1-800-DryClean Franchising",
+          "1-800-Fixed-Up",
+          "1-800-GOT-JUNK?",
+          "1-800-GOT-MOLD?"
+        ]
+      },
+      {
+        "name": "local_id",
+        "type": "varchar(256)",
+        "description": "Legacy identifier carried from an older system or imported data source. Helps maintain reference to historical records during data migration."
+      },
+      {
+        "name": "accounting_id",
+        "type": "varchar(256)",
+        "description": "Identifier used when linking the customer with accounting or billing systems. Allows financial records to reference the same customer across platforms."
+      },
+      {
+        "name": "gpfv_id",
+        "type": "int",
+        "description": "Global identifier representing the SAME customer across multiple sites. Customers belonging to the same brand share the same gpfv_id even when they have different customer ids per site. Use this column for: counting unique customers across the network (COUNT DISTINCT gpfv_id), grouping leads or revenue by unique real-world customer across sites, or any cross-site customer aggregation. For single-site queries, use customers.id. For network-wide unique customer count: SELECT COUNT(DISTINCT gpfv_id) FROM franchises.customers WHERE is_deleted = 0."
+      },
+      {
+        "name": "parent_id",
+        "type": "int",
+        "description": "Used for linking customers in a parent–child relationship, primarily for BBN customers (site_id=17). If a customer belongs under another customer account, the parent customer's id is stored here. References customers.id."
+      },
+      {
+        "name": "ein",
+        "type": "int",
+        "description": "Employer Identification Number provided by the customer. Used for business verification or administrative records."
+      },
+      {
+        "name": "active",
+        "type": "int",
+        "description": "Indicates whether the customer account is active. 1 = active customer allowed to operate normally. 0 = inactive. Active customers can have active contracts and visible concepts."
+      },
+      {
+        "name": "status",
+        "type": "int",
+        "description": "Operational status code for the customer account. Integer stored here is resolved to a human-readable label via: JOIN franchises.master_types mt ON c.status = mt.id AND mt.type_category = 'customer_status' — the AND mt.type_category filter is REQUIRED, omitting it produces duplicate rows. SELECT mt.display_name for the readable label. Never expose the raw integer to the user.",
+        "example_values": [
+          "Customer",
+          "Customer Response",
+          "Active",
+          "Inactive",
+          "Paused",
+          "Paused - Monthly Cap",
+          "Paused - Smoothing",
+          "Direct",
+          "Agency",
+          "Broker"
+        ]
+      },
+      {
+        "name": "temp_bill_type",
+        "type": "varchar(45)",
+        "description": "Temporary billing type during account setup or billing configuration changes. Allows staging of billing values before the final configuration is applied."
+      },
+      {
+        "name": "temp_parent_id",
+        "type": "varchar(45)",
+        "description": "Temporary parent reference during onboarding or data migration. Helps link related customer accounts before final relationships are established."
+      },
+      {
+        "name": "deactivate_date",
+        "type": "datetime",
+        "description": "Date when the customer account was deactivated. After this date the customer no longer receives leads.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-03-31 00:00:00"
+        ]
+      },
+      {
+        "name": "biz_buy_sell_customer",
+        "type": "int",
+        "description": "Flag identifying customers that originated from the BizBuySell platform. Mainly relevant for BBN customers (site_id=17). 1 = came from BizBuySell."
+      },
+      {
+        "name": "trial",
+        "type": "int",
+        "description": "Indicates whether the customer account is on a trial plan. 1 = on trial. Identifies customers testing the platform before moving to a regular contract."
+      },
+      {
+        "name": "is_parent",
+        "type": "int",
+        "description": "Indicates whether the customer record acts as a parent account. Mainly used for BBN customers (site_id=17). If 1, other customer records may reference this customer in their parent_id field."
+      },
+      {
+        "name": "source_id",
+        "type": "int",
+        "description": "Identifies the site or platform from which the customer was originally onboarded. References franchises.sites_info.site_id. Helps track where the customer account originated. Distinct from customers.site_id which is the site where the record lives."
+      },
+      {
+        "name": "source_name",
+        "type": "varchar(45)",
+        "description": "Readable name of the source where the customer came from. Makes it easier to understand the onboarding source without relying on numeric identifiers.",
+        "example_values": [
+          "sunbelt_primary_office"
+        ]
+      },
+      {
+        "name": "activation_date",
+        "type": "date",
+        "description": "Date when the customer first became eligible to receive leads. Represents the first active date for the customer account.",
+        "example_values": [
+          "range:2001-04-22 → 2026-03-09"
+        ]
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp showing when the customer record was created in the database. Used for auditing and operational history.",
+        "example_values": [
+          "range:2001-04-30 00:00:00 → 2026-03-09 18:15:11"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp indicating when the customer record was last updated. Any administrative changes to the account update this value.",
+        "example_values": [
+          "range:2021-06-07 10:44:56 → 2026-03-09 18:15:11"
+        ]
+      },
+      {
+        "name": "is_deleted",
+        "type": "int",
+        "description": "Soft delete flag. 1 = record is deleted or hidden from operational views. 0 = customer record is active and available. ALWAYS filter WHERE is_deleted = 0 in any customer query unless explicitly asked for deleted records."
+      }
+    ]
+  },
+  {
+    "table_name": "concepts",
+    "database_name": "franchises",
+    "purpose": "Concepts — Represents franchise business opportunities displayed to users on search and category pages. Each concept belongs to a customer and is listed on a specific site.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [
+      {
+        "column": "site_id",
+        "references": "franchises.sites_info(site_id)",
+        "cardinality": "N:1"
+      }
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Primary key for the concept record. Each concept represents a franchise or business opportunity displayed on a specific website. Concepts appear on search pages only when there is at least one active contract associated with them. (Examples: 220833, 220834)"
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "Identifies the site where the concept exists. References franchises.sites_info.site_id. Concepts are created per site, but the same brand may exist on multiple sites through syndication.",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "fbo_id",
+        "type": "int",
+        "description": "Franchise brand identifier used to represent the same brand across multiple sites. Concepts sharing the same fbo_id belong to the same brand but exist as separate rows on different sites. IMPORTANT: querying by fbo_id alone returns MULTIPLE rows (one per site). Always add AND c.site_id = <target_site_id> or join using BOTH fbo_id AND site_id whenever a single concept row is needed. Also used in leads_all_business to identify the concept selected by the prospect."
+      },
+      {
+        "name": "name",
+        "type": "varchar(128)",
+        "description": "Display name of the franchise concept shown on the website and search pages when users browse available opportunities. (Examples: #getfried, Subway)",
+        "example_values": [
+          "1 Coffee Source",
+          "1 Stop Pool Pros",
+          "1-1Jobs/National Hospitality Recruiting, Inc.",
+          "$1-2-3 Dollar",
+          "1-800 Flowers Franchising",
+          "1-800-DryClean",
+          "1-800-DryClean Franchising",
+          "1-800-Fixed-Up",
+          "1-800-GOT-JUNK?",
+          "1-800-GOT-MOLD?"
+        ]
+      },
+      {
+        "name": "investment",
+        "type": "int",
+        "description": "Minimum investment required for the concept. Used in search filtering and matching leads based on user investment preference."
+      },
+      {
+        "name": "active",
+        "type": "int",
+        "description": "Indicates whether the concept record is active in the system. 1 = active. 0 = inactive. IMPORTANT: this field does NOT control whether the concept appears on search pages — only the associated contract's status (status = 3 in franchises.contracts) controls search-page visibility. An active=1 concept with no active contract will NOT appear on search pages."
+      },
+      {
+        "name": "status",
+        "type": "varchar(45)",
+        "description": "Internal classification used for administrative tracking of the concept. Does NOT control visibility on search pages — visibility is determined by the associated contract's status in franchises.contracts."
+      },
+      {
+        "name": "cume",
+        "type": "int",
+        "description": "Internal cumulative metric maintained by internal processes to track aggregated activity for the concept."
+      },
+      {
+        "name": "leads_30_days",
+        "type": "int",
+        "description": "Stores the number of leads received by the concept in the last 30 days. Used for reporting and monitoring concept performance."
+      },
+      {
+        "name": "local_id",
+        "type": "int",
+        "description": "Legacy identifier used when the concept originates from earlier systems or external imports."
+      },
+      {
+        "name": "search_rank",
+        "type": "double",
+        "description": "Ranking weight used when ordering concepts in search results. Works together with contract-based ranking values."
+      },
+      {
+        "name": "search_rank_cap",
+        "type": "double",
+        "description": "Ranking adjustment value related to contract cap availability. Influences concept ranking when contracts approach their lead limits."
+      },
+      {
+        "name": "search_rank_revenue",
+        "type": "double",
+        "description": "Ranking adjustment influenced by revenue performance. Modifies search placement based on historical revenue associated with the concept."
+      },
+      {
+        "name": "new_tag",
+        "type": "int",
+        "description": "Indicates whether the concept is marked as new. 1 = newly introduced. May be used to highlight the concept in listings."
+      },
+      {
+        "name": "not_on_paid",
+        "type": "int",
+        "description": "Indicates whether the concept should be excluded from paid placements. 1 = excluded from paid placement areas."
+      },
+      {
+        "name": "owner_financing",
+        "type": "int",
+        "description": "Indicates whether owner financing is available for the concept. 1 = owner financing options are offered."
+      },
+      {
+        "name": "cash_flow",
+        "type": "varchar(256)",
+        "description": "Estimated cash flow value associated with the concept. May be shown to users to help evaluate the opportunity."
+      },
+      {
+        "name": "annual_revenue",
+        "type": "varchar(256)",
+        "description": "Estimated annual revenue for the concept. Helps provide additional financial information about the business opportunity."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp indicating when the concept record was created.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-03-09 17:58:58"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp showing the most recent update made to the concept record.",
+        "example_values": [
+          "range:2021-06-07 10:44:58 → 2026-03-09 18:56:12"
+        ]
+      },
+      {
+        "name": "is_deleted",
+        "type": "int",
+        "description": "Soft delete flag. 1 = concept is marked as deleted or hidden. 0 = concept is active and usable. ALWAYS filter WHERE is_deleted = 0 in any concept query unless explicitly asked for deleted records."
+      }
+    ]
+  },
+  {
+    "table_name": "contracts",
+    "database_name": "franchises",
+    "purpose": "Contracts — The central visibility and billing record connecting a customer, a concept, and a site. Contracts govern rate (RPL), monthly_cap, sales rep assignment, site placement, dayparting, and syndication eligibility.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [
+      {
+        "column": "customers_id",
+        "references": "franchises.customers(id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "sales_reps_id",
+        "references": "franchises.sales_reps(id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "last_sales_reps_id",
+        "references": "franchises.sales_reps(id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "concepts_id",
+        "references": "franchises.concepts(id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "site_id",
+        "references": "franchises.sites_info(site_id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "status",
+        "references": "franchises.master_types(id)",
+        "cardinality": "N:1"
+      }
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Primary key of the contract record. Each contract represents the relationship between a customer and a concept on a specific site. Controls lead delivery, billing, and concept visibility."
+      },
+      {
+        "name": "customers_id",
+        "type": "int",
+        "description": "References the customer who owns the contract. Foreign key to franchises.customers.id. The customer associated with the contract receives the leads generated for the concept.",
+        "example_values": [
+          "sunbelt_primary_office"
+        ]
+      },
+      {
+        "name": "sales_reps_id",
+        "type": "int",
+        "description": "Identifies the sales representative currently responsible for managing the contract. References franchises.sales_reps.id. Join to sales_reps to get rep name and email.",
+        "example_values": [
+          "Jenny",
+          "Sylvia",
+          "Melissa",
+          "Ben",
+          "House",
+          "Eric",
+          "Jessica",
+          "Lee",
+          "Matt",
+          "Kim"
+        ]
+      },
+      {
+        "name": "last_sales_reps_id",
+        "type": "int",
+        "description": "Stores the previously assigned sales representative for the contract. References franchises.sales_reps.id. Used to maintain account transfer history when contract ownership changes.",
+        "example_values": [
+          "Jenny",
+          "Sylvia",
+          "Melissa",
+          "Ben",
+          "House",
+          "Eric",
+          "Jessica",
+          "Lee",
+          "Matt",
+          "Kim"
+        ]
+      },
+      {
+        "name": "concepts_id",
+        "type": "int",
+        "description": "References the concept supported by this contract. Foreign key to franchises.concepts.id. The concept linked to this contract appears on the site only when the contract is active.",
+        "example_values": [
+          "1 Coffee Source",
+          "1 Stop Pool Pros",
+          "1-1Jobs/National Hospitality Recruiting, Inc.",
+          "$1-2-3 Dollar",
+          "1-800 Flowers Franchising",
+          "1-800-DryClean",
+          "1-800-DryClean Franchising",
+          "1-800-Fixed-Up",
+          "1-800-GOT-JUNK?",
+          "1-800-GOT-MOLD?"
+        ]
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "Identifies the site where the contract is active. References franchises.sites_info.site_id. The concept appears on this site's search pages when the contract is active.",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "local_id",
+        "type": "int",
+        "description": "Legacy contract identifier from older systems. Used mainly for migration and historical reference."
+      },
+      {
+        "name": "listings_id",
+        "type": "int",
+        "description": "Identifier used when the contract is associated with a business-for-sale listing (BBN related). 100% NULL for non-BBN contracts."
+      },
+      {
+        "name": "rate",
+        "type": "float",
+        "description": "The configured billing rate per lead for this contract. CRITICAL WARNING: NEVER use this column for revenue reporting or calculations. This is only the contract configuration value and may differ from what was actually charged. ALWAYS use SUM(leads_all_business.rpl) WHERE lead_status = 'SUCCESS' for all revenue, earnings, or income queries. The rpl field in leads_all_business captures the exact rate at moment of lead processing."
+      },
+      {
+        "name": "investment_level",
+        "type": "int",
+        "description": "Investment value shown on search pages for the concept associated with this contract. Also stored in the processed lead record. Represents the investment amount shown to the user when submitting a lead."
+      },
+      {
+        "name": "investment_flag",
+        "type": "int",
+        "description": "Controls whether investment information is displayed to the user. 1 = investment value is shown. 0 = investment information is hidden."
+      },
+      {
+        "name": "phone_flag",
+        "type": "int",
+        "description": "Determines whether the prospect's phone number is shared with the customer in lead delivery. 1 = phone included. 0 = phone hidden."
+      },
+      {
+        "name": "address_flag",
+        "type": "int",
+        "description": "Determines whether the prospect's address is shared with the customer. 1 = address included in delivered lead. 0 = address hidden."
+      },
+      {
+        "name": "weekend_pause",
+        "type": "int",
+        "description": "Indicates whether the contract pauses lead delivery during weekends. 1 = no leads delivered on Saturdays and Sundays."
+      },
+      {
+        "name": "start_date",
+        "type": "datetime",
+        "description": "Date when the contract becomes active and lead delivery begins. CRITICAL FOR HISTORICAL QUERIES: to check if a contract was active at the time of a lead, verify that lead_date >= start_date (or start_date IS NULL).",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2221-11-12 05:00:00"
+        ]
+      },
+      {
+        "name": "end_date",
+        "type": "datetime",
+        "description": "Date when the contract expires and the concept stops receiving leads. CRITICAL FOR HISTORICAL QUERIES: to check if a contract was active at the time of a lead, verify that lead_date <= end_date (or end_date IS NULL).",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-03-31 00:00:00"
+        ]
+      },
+      {
+        "name": "future_pause_date",
+        "type": "datetime",
+        "description": "Scheduled date when the contract will automatically move to paused status. Allows contracts to pause without manual updates.",
+        "example_values": [
+          "range:2022-03-23 00:00:00 → 2026-03-20 00:00:00"
+        ]
+      },
+      {
+        "name": "future_restart_date",
+        "type": "datetime",
+        "description": "Scheduled date when the contract becomes active again after a pause. Works together with future_pause_date to control contract availability automatically.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-05-01 00:00:00"
+        ]
+      },
+      {
+        "name": "status",
+        "type": "int",
+        "description": "Current contract status as an integer. This is the VISIBILITY CONTROL field — a concept is visible on search pages and eligible to receive leads ONLY when this value is 3 (Active). To get human-readable label: JOIN franchises.master_types mt ON contr.status = mt.id AND mt.type_category = 'contract_status'. The type_category = 'contract_status' filter is REQUIRED — omitting it causes duplicate rows. Known values: 3=Active, 4=Paused, 5=Expired, 6=Cancelled. For 'which concepts are visible / active / receiving leads': WHERE contracts.status = 3 AND contracts.is_deleted = 0. EXCEPTION: for historical queries (was a contract active AT a specific date?), compare lead_date against start_date and end_date directly instead of checking the current status field.",
+        "example_values": [
+          "Active",
+          "Paused",
+          "Expired",
+          "Cancelled"
+        ]
+      },
+      {
+        "name": "temp_status",
+        "type": "int",
+        "description": "Temporary status used when a contract change is pending or under review. Allows staging of status changes before the final value is applied. (3=Active, 6=Cancelled)"
+      },
+      {
+        "name": "banner_id",
+        "type": "int",
+        "description": "References the banner associated with the contract for promoted placement. Concepts with banners may appear highlighted on search pages."
+      },
+      {
+        "name": "featured",
+        "type": "int",
+        "description": "Indicates whether the concept should appear at the top of search results. 1 = shown as featured. 0 = follows normal ranking rules."
+      },
+      {
+        "name": "shared",
+        "type": "int",
+        "description": "Indicates whether this contract shares lead caps with other contracts. When enabled, multiple contracts may share the same cap group."
+      },
+      {
+        "name": "lead_smoothing",
+        "type": "int",
+        "description": "Enables lead smoothing for the contract. When 1, leads are distributed across the month based on remaining cap and days left to prevent front-loading."
+      },
+      {
+        "name": "enforce_lead_smoothing",
+        "type": "int",
+        "description": "Determines whether lead smoothing rules are strictly enforced. When 1, the system prevents exceeding the calculated pacing for the contract."
+      },
+      {
+        "name": "dayparting",
+        "type": "int",
+        "description": "Enables dayparting behavior. When 1, the contract moves to dayparting status between 12:00 AM and 8:00 AM (controlled by the dayparting cron) and becomes active during remaining hours. This affects when the concept is eligible to receive leads."
+      },
+      {
+        "name": "free_end_date",
+        "type": "datetime",
+        "description": "Date when the free trial period for the contract ends. Commonly used for FranLinks related contracts. After this date, billing begins.",
+        "example_values": [
+          "range:2020-10-30 23:59:59 → 2099-12-31 23:59:59"
+        ]
+      },
+      {
+        "name": "current_month_leads",
+        "type": "int",
+        "description": "Number of leads delivered to the contract during the current calendar month. Used to track lead delivery against the monthly cap."
+      },
+      {
+        "name": "last_month_leads",
+        "type": "int",
+        "description": "Number of leads delivered during the previous month. Used for reporting and historical comparison."
+      },
+      {
+        "name": "leads_30_days",
+        "type": "int",
+        "description": "Rolling count of leads delivered in the last 30 days. Used for performance monitoring and reporting."
+      },
+      {
+        "name": "monthly_cap",
+        "type": "int",
+        "description": "Maximum number of successful leads the contract can receive in a calendar month. Once this limit is reached, the contract stops receiving additional leads until the cap resets at the start of the next month. (Examples: 5, 10, 20, 50)"
+      },
+      {
+        "name": "search_rank",
+        "type": "double",
+        "description": "Ranking value used to determine the concept's position in search results. Influences listing placement."
+      },
+      {
+        "name": "search_rank_cap",
+        "type": "double",
+        "description": "Ranking adjustment value related to contract cap availability. Used when calculating ranking as the cap fills up."
+      },
+      {
+        "name": "search_rank_revenue",
+        "type": "double",
+        "description": "Ranking value influenced by revenue performance. Adjusts concept position based on revenue history."
+      },
+      {
+        "name": "priority",
+        "type": "int",
+        "description": "Determines which contract is considered first when multiple contracts qualify for a lead. Contracts with higher priority values are evaluated before lower priority ones."
+      },
+      {
+        "name": "show_contract_type",
+        "type": "int",
+        "description": "Controls whether the contract type is displayed in the administrative user interface."
+      },
+      {
+        "name": "custom_subject",
+        "type": "text",
+        "description": "Custom email subject line used when sending lead delivery notifications to customers. Allows customization of lead notification emails."
+      },
+      {
+        "name": "send_followup_email",
+        "type": "tinyint(1)",
+        "description": "Indicates whether follow-up emails are sent automatically after a lead is delivered. 1 = enabled. 0 = disabled."
+      },
+      {
+        "name": "fg",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from Franchise Gator when used as a non-syndicated lead source. 1 = leads from FG are accepted."
+      },
+      {
+        "name": "fo",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from Franchise Opportunities when used as a non-syndicated lead source. 1 = leads from FO are allowed."
+      },
+      {
+        "name": "fs",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from Franchise Solutions as a non-syndicated lead source."
+      },
+      {
+        "name": "fcom",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from Franchise.com as a non-syndicated lead source."
+      },
+      {
+        "name": "bbn",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from the BBN platform as a non-syndicated lead source."
+      },
+      {
+        "name": "ffs",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from the Franchise For Sale site as a non-syndicated lead source."
+      },
+      {
+        "name": "ff",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from the Food Franchise site as a non-syndicated lead source."
+      },
+      {
+        "name": "myac",
+        "type": "int",
+        "description": "Indicates whether this contract accepts leads from the My Account related site flow as a non-syndicated lead source."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp when the contract record was created.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-03-09 18:17:11"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp showing the most recent modification to the contract record.",
+        "example_values": [
+          "range:2021-10-12 09:09:44 → 2026-03-10 05:41:09"
+        ]
+      },
+      {
+        "name": "is_deleted",
+        "type": "int",
+        "description": "Soft delete flag. 1 = contract is marked as deleted. 0 = contract is active in the system. ALWAYS filter WHERE is_deleted = 0 when querying contracts for current states unless explicitly asked for deleted records."
+      }
+    ]
+  },
+  {
+    "table_name": "sales_reps",
+    "database_name": "franchises",
+    "purpose": "Sales Representatives — Stores the profiles, contact details, and availability of sales reps (also called account managers or account executives) who manage customer accounts and contracts.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Unique identifier for each sales representative. Referenced by contracts.sales_reps_id and contracts.last_sales_reps_id."
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "Associates the rep with a specific franchise portal or platform. References franchises.sites_info.site_id."
+      },
+      {
+        "name": "rep_order",
+        "type": "int",
+        "description": "Display sequence number determining the representative's listing order in assignment interfaces."
+      },
+      {
+        "name": "first_name",
+        "type": "varchar(128)",
+        "description": "Sales representative's given name used for communications and reporting. (Examples: Ben, Eric, Jenny)"
+      },
+      {
+        "name": "last_name",
+        "type": "varchar(128)",
+        "description": "Sales representative's surname used for communications and reporting. (Examples: Bell, Woodruff, Turner)"
+      },
+      {
+        "name": "email",
+        "type": "varchar(128)",
+        "description": "Primary business contact email for lead notifications and account management communications. (Examples: ben.woodruff@franchisegator.com)"
+      },
+      {
+        "name": "linkedin_profile",
+        "type": "text",
+        "description": "Professional LinkedIn profile URL for the sales rep."
+      },
+      {
+        "name": "job_title",
+        "type": "varchar(128)",
+        "description": "Representative's official position designation. (Examples: Senior Account Executive)",
+        "example_values": [
+          "Senior Account Executive"
+        ]
+      },
+      {
+        "name": "phone_no",
+        "type": "varchar(255)",
+        "description": "Direct contact phone number for the sales rep."
+      },
+      {
+        "name": "active",
+        "type": "int",
+        "description": "Flag indicating if the rep is currently available for lead assignments. 1 = active. 0 = inactive."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp of when the representative profile was initially created.",
+        "example_values": [
+          "range:2021-06-07 10:44:56 → 2023-10-05 10:47:14"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp of most recent profile modification.",
+        "example_values": [
+          "range:2023-10-16 14:16:03 → 2024-02-28 12:53:41"
+        ]
+      },
+      {
+        "name": "is_deleted",
+        "type": "int",
+        "description": "Soft delete indicator. 1 = deleted and hidden from active use. 0 = visible and active."
+      }
+    ]
+  },
+  {
+    "table_name": "leads_all_business",
+    "database_name": "franchise_new",
+    "purpose": "Processed Leads — The primary fact table storing every lead (also called inquiry, form submission, prospect submission, or request) submitted by a prospective buyer on a concept page across all sites. Use this table for: lead count, lead volume, revenue, RPL, earnings, income, marketing attribution, geographic analysis (city, state, country), device/browser breakdown, duplicate rate, failure rate, LRQ analysis, UTM/campaign performance, and any time-series analysis of leads or revenue.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [
+      {
+        "column": "fbo_id + site_id",
+        "references": "franchises.concepts(fbo_id + site_id) — ALWAYS join on BOTH columns to avoid syndication duplicates",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "site_id",
+        "references": "franchises.sites_info(site_id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "source_id",
+        "references": "franchises.sites_info(site_id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "contracts_id",
+        "references": "franchises.contracts(id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "category_id",
+        "references": "franchises.sites_categories(category_id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "failed_reason_id",
+        "references": "franchises.master_types(id)",
+        "cardinality": "N:1"
+      }
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int unsigned",
+        "description": "Unique identifier created once a lead completes validation and processing. Represents the final record used in reporting, billing, credit adjustments, and failed reprocess checks. Any lead delivered to a customer is referenced using this id."
+      },
+      {
+        "name": "email_address",
+        "type": "varchar(256)",
+        "description": "Email entered by the prospect at submission. Goes through Neustar and TowerData validation which influences whether the lead becomes SUCCESS, FAIL, or LRQ_PENDING. Shared with customers as part of delivered lead and used to identify duplicate submissions."
+      },
+      {
+        "name": "fbo_id",
+        "type": "varchar(100)",
+        "description": "The global concept identifier for the concept this lead was submitted for. Corresponds to franchises.concepts.fbo_id. CRITICAL JOIN RULE: because the same fbo_id exists once per site in franchises.concepts (for syndicated concepts), you MUST join using BOTH columns: JOIN franchises.concepts c ON c.fbo_id = lab.fbo_id AND c.site_id = lab.site_id. Joining on fbo_id alone produces duplicate rows."
+      },
+      {
+        "name": "first_name",
+        "type": "varchar(500)",
+        "description": "Prospect first name captured from the lead form. Included in the lead information shared with customers."
+      },
+      {
+        "name": "last_name",
+        "type": "varchar(500)",
+        "description": "Prospect last name captured during submission. Included in notifications and CRM delivery."
+      },
+      {
+        "name": "street_address",
+        "type": "varchar(500)",
+        "description": "Address information provided by the prospect. Used by customers for qualification and geographic reporting."
+      },
+      {
+        "name": "city",
+        "type": "varchar(500)",
+        "description": "City entered by the prospect. Used in regional reporting and included in details delivered to customers. (Examples: Abbeville, Abbotsford)"
+      },
+      {
+        "name": "state_name",
+        "type": "varchar(500)",
+        "description": "Full state or province name provided in the submission. Supports regional reporting and is delivered to customers. (Examples: Virginia, California)",
+        "example_values": [
+          "Virginia"
+        ]
+      },
+      {
+        "name": "state_code",
+        "type": "varchar(100)",
+        "description": "Short code representing the state or region. Used alongside state_name for consistent geographic data. (Examples: VA, CA, AB, AK)",
+        "example_values": [
+          "AB",
+          "AK",
+          "AL",
+          "AR",
+          "AZ",
+          "BC",
+          "CA",
+          "CO",
+          "CT",
+          "DC"
+        ]
+      },
+      {
+        "name": "zip_code",
+        "type": "varchar(500)",
+        "description": "ZIP or postal code captured from the prospect. Used for territory coverage assessment and location-based reporting."
+      },
+      {
+        "name": "country",
+        "type": "varchar(500)",
+        "description": "Country information submitted by the prospect. Distinguishes domestic versus international interest. (Examples: USA, CAN)",
+        "example_values": [
+          "USA",
+          "CAN"
+        ]
+      },
+      {
+        "name": "phone",
+        "type": "varchar(500)",
+        "description": "Primary phone number submitted in the form. Phone validation contributes to the decision between SUCCESS, FAIL, and LRQ statuses. Depending on contract configuration, shared with customers."
+      },
+      {
+        "name": "min_capital",
+        "type": "varchar(500)",
+        "description": "Minimum investment shown to the prospect for the concept at time of submission. Comes from concept brochure data and reflects what the user saw on the site."
+      },
+      {
+        "name": "max_capital",
+        "type": "varchar(500)",
+        "description": "Maximum investment displayed for the concept during submission. Comes from concept brochure and reflects the investment range presented to the user."
+      },
+      {
+        "name": "investment",
+        "type": "varchar(500)",
+        "description": "Investment value recorded for the lead based on contracts.investment_level. Represents the investment amount shown on the search page for that contract at submission time."
+      },
+      {
+        "name": "timeframe",
+        "type": "varchar(500)",
+        "description": "Timeframe selected by the prospect for starting the business. Customers use this to prioritize follow-up and understand prospect readiness."
+      },
+      {
+        "name": "ip_address",
+        "type": "varchar(100)",
+        "description": "IP address captured at submission. Used for validation, tracking, and identifying suspicious or duplicate activity."
+      },
+      {
+        "name": "lead_status",
+        "type": "varchar(500)",
+        "description": "Final processing outcome of the lead. SUCCESS = lead was distributed to a winner contract. DUPLICATE = already submitted. FAIL = rejected by validation. LRQ_SUCCESS = approved after manual review. LRQ_FAIL = rejected after review. LRQ_PENDING = awaiting manual admin review. Revenue reporting uses ONLY SUCCESS leads. (Examples: SUCCESS, DUPLICATE, FAIL, LRQ_PENDING)",
+        "example_values": [
+          "DUPLICATE",
+          "FAIL",
+          "FREE_INACTIVE",
+          "FREE_PAUSED",
+          "LRQ_FAIL",
+          "SUCCESS"
+        ]
+      },
+      {
+        "name": "status_message",
+        "type": "varchar(5000)",
+        "description": "Additional context about the lead outcome recorded in lead_status. May include verification failure details, cap filled information, or LRQ review notes. Helps internal teams understand why a lead did not become successful."
+      },
+      {
+        "name": "web_id",
+        "type": "varchar(500)",
+        "description": "Identifies the website, form, or campaign configuration used during submission. Helps trace which setup generated the lead."
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "The PARENT SITE of the processed lead — the main site platform the lead is attributed to. References franchises.sites_info.site_id. USE THIS for filtering leads by site in reporting (e.g. WHERE site_id = si.site_id when joined to sites_info). (Examples: 4, 5, 6, 7)",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "source_id",
+        "type": "int",
+        "description": "The ORIGINAL site where the lead was first submitted before syndication routing. This may differ from site_id when a lead is syndicated from a child site to the parent network. References franchises.sites_info.site_id. Distinct from site_id: site_id = final attribution site (parent), source_id = actual submission origin site.",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "source",
+        "type": "varchar(100)",
+        "description": "Stores the originating site reference for the lead as a varchar (contains numeric site_id values cast to string). Complements source_id for traffic origin reporting. Do NOT join this column directly to sites_info.site_id — it is stored as a varchar and is used for internal traffic tracking. Use site_id or source_id (both int) for site join operations."
+      },
+      {
+        "name": "lead_id",
+        "type": "bigint",
+        "description": "Links the processed lead back to the original user_lead_details record. Ensures traceability between raw submission data and the processed lead."
+      },
+      {
+        "name": "lead_source",
+        "type": "varchar(45)",
+        "description": "Indicates the acquisition channel for the lead. WEB = submitted on the main website. APP = submitted through a mobile app. FBO_WEB = submitted through a franchise brand owner's web page. FBO_APP = submitted via FBO mobile app. APPS = multi-app submissions. This is a CATEGORICAL field — use these exact values in WHERE clauses when filtering by channel type.",
+        "example_values": [
+          "WEB",
+          "FBO_WEB",
+          "APP",
+          "FBO_APP",
+          "APPS"
+        ]
+      },
+      {
+        "name": "os_type",
+        "type": "varchar(45)",
+        "description": "Captures the operating system or device used during submission. (Examples: Web, iOS, Android)",
+        "example_values": [
+          "web",
+          "iOS",
+          "android",
+          "iPadOS"
+        ]
+      },
+      {
+        "name": "rpl",
+        "type": "double",
+        "description": "Rate per lead taken from the winner contract at the time of processing. PRIMARY REVENUE FIELD. To calculate total revenue: SUM(rpl) WHERE lead_status = 'SUCCESS'. Capturing RPL at processing time ensures billing reflects contract configuration at that exact moment. (Examples: 2.0, 15.0, 20.0)"
+      },
+      {
+        "name": "revenue_type",
+        "type": "varchar(45)",
+        "description": "Classifies the type of revenue associated with the lead. Helps segment billing and reporting scenarios. (Examples: EMAILBLAST, PPL)",
+        "example_values": [
+          "PPL",
+          "EMAILBLAST"
+        ]
+      },
+      {
+        "name": "processed_status",
+        "type": "varchar(100)",
+        "description": "Records the result of reprocessing attempts for leads that were previously failed due to cap or other conditions. The failed reprocess cron reviews recent failed leads and updates this field.",
+        "example_values": [
+          "SUCCESS",
+          "FAIL"
+        ]
+      },
+      {
+        "name": "processed_message",
+        "type": "varchar(5000)",
+        "description": "Notes describing what happened during reprocessing. May include reasons for retry success or continued failure."
+      },
+      {
+        "name": "lead_category",
+        "type": "varchar(100)",
+        "description": "Textual classification describing the type of lead. Works alongside category_id to support reporting and segmentation."
+      },
+      {
+        "name": "category_id",
+        "type": "varchar(10)",
+        "description": "Numeric identifier of the primary category of the winner concept associated with the lead. Derived from franchises.categories where primary = 1 for the winner concept. If the All Industry filter was selected at submission, this value is 0. To get the category name for this lead: JOIN franchises.sites_categories sc ON sc.category_id = lab.category_id AND sc.site_id = lab.site_id → SELECT sc.category_name. This is the primary field for grouping leads or revenue by industry category."
+      },
+      {
+        "name": "failed_reason_id",
+        "type": "varchar(10)",
+        "description": "Captures the LRQ or failure reason when a lead becomes FAIL or LRQ_FAIL. Foreign reference to franchises.master_types. Helps explain verification or qualification outcomes."
+      },
+      {
+        "name": "cart_id",
+        "type": "varchar(100)",
+        "description": "Session identifier when multiple leads are submitted together in a single cart. Allows grouping of related submissions and analyzing cart behavior."
+      },
+      {
+        "name": "neustar_flag",
+        "type": "int",
+        "description": "Data verification status flag from the Neustar validation service, used for lead quality assessment. Influences whether the lead passes or fails validation. (100% NULL in most records)"
+      },
+      {
+        "name": "utm_campaign",
+        "type": "varchar(256)",
+        "description": "Campaign name associated with the lead submission. Allows teams to evaluate performance of specific marketing initiatives.",
+        "example_values": [
+          "business sn",
+          "exclusionsoct2023",
+          "exclusionsoct2023_captcha",
+          "top_conv",
+          "{campaign}",
+          "perfmaxjan2023",
+          "abandoncart",
+          "business",
+          "top-keywords-bing-yahoo-mobile"
+        ]
+      },
+      {
+        "name": "gclid_mlclkid",
+        "type": "varchar(256)",
+        "description": "Advertising click identifiers from Google (gclid) or Microsoft (msclkid). Used for campaign tracking and conversion reporting."
+      },
+      {
+        "name": "new_utm_source",
+        "type": "varchar(256)",
+        "description": "Source that generated the lead (e.g., Google, Facebook, partner site). Used to track campaign origin and evaluate traffic quality.",
+        "example_values": [
+          "acton",
+          "app-BFS",
+          "app-F",
+          "app-FG",
+          "app-FO",
+          "app-FS",
+          "app-ORF",
+          "app-SBS",
+          "bing",
+          "businessbroker.net"
+        ]
+      },
+      {
+        "name": "new_utm_medium",
+        "type": "varchar(256)",
+        "description": "Marketing medium associated with the lead (cpc, email, organic). Supports campaign performance analysis. ",
+        "example_values": [
+          "cpc",
+          "direct",
+          "text",
+          "email",
+          "app",
+          "organic",
+          "social",
+          "emailexclusive",
+          "textexclusive",
+          "llm"
+        ]
+      },
+      {
+        "name": "new_utm_type",
+        "type": "varchar(256)",
+        "description": "Defines the acquisition source type (paid vs free/organic) for a processed lead. Stored in leads_all_business when true marketing attribution is modified or corrected during reprocessing. Ensures that paid versus organic channel classification always reflects the latest correct evaluation.",
+        "example_values": [
+          "paid",
+          "free"
+        ]
+      },
+      {
+        "name": "lead_date",
+        "type": "datetime",
+        "description": "PRIMARY TIMESTAMP for ALL lead and revenue analysis. Represents when the lead was processed and assigned to the winner contract. ALWAYS use lead_date (not create_date) in WHERE clauses for any date-range filtering on this table. Used for: revenue by period (SUM rpl WHERE lead_status='SUCCESS'), monthly cap evaluation, trend analysis, and all time-based lead reporting.",
+        "example_values": [
+          "range:2024-03-07 00:07:01 → 2026-03-09 18:52:20"
+        ]
+      },
+      {
+        "name": "contracts_id",
+        "type": "int",
+        "description": "The contract ID assigned to this lead after validation and business rule evaluation. Foreign key to franchises.contracts. Represents historical winner contract attribution — the contract at time of submission, not the current contract state. Determines billing, cap counting, and associated sales rep."
+      },
+      {
+        "name": "lead_credit",
+        "type": "varchar(256)",
+        "description": "CRITICAL: This column ONLY contains \"0\" or \"1\". It does NOT contain words like 'FAILED' or 'CREDITED'. Indicates whether a lead was credited back to the customer. When lead_credit=\"1\", the lead is considered refunded/invalid, so it DOES NOT count toward that month's billing cap and an additional lead is provided. Use lead_status column for words like SUCCESS/FAILED.",
+        "example_values": [
+          "0",
+          "1"
+        ]
+      },
+      {
+        "name": "act_on",
+        "type": "int",
+        "description": "Shows whether Act-On marketing automation workflows were applied to the lead. 100% NULL — not in active use."
+      },
+      {
+        "name": "submission_url",
+        "type": "varchar(256)",
+        "description": "URL where the prospect submitted the lead. Helps determine whether the submission came from an organic site page or a paid landing page."
+      },
+      {
+        "name": "form_url",
+        "type": "text",
+        "description": "Full landing page or form URL used during submission. Provides deeper context than submission_url by showing the exact page where the form existed."
+      },
+      {
+        "name": "browser_type",
+        "type": "varchar(45)",
+        "description": "Browser or device used by the prospect when submitting. (Examples: desktop, iOS, mobile)",
+        "example_values": [
+          "mobile",
+          "desktop",
+          "iOS"
+        ]
+      },
+      {
+        "name": "landing_id",
+        "type": "varchar(256)",
+        "description": "Identifier representing the landing page or campaign configuration tied to the lead. Connects leads to specific landing page experiences."
+      },
+      {
+        "name": "cc_email_address",
+        "type": "varchar(45)",
+        "description": "Additional email address included for notifications when the lead is delivered. Allows multiple recipients to receive lead information."
+      },
+      {
+        "name": "available_cash_check",
+        "type": "int",
+        "description": "Indicates whether the prospect confirmed available cash qualification during submission. 1 = confirmed. Helps customers understand prospect readiness."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp showing when the processed lead record was physically inserted into the database. This is NOT the same as lead_date. Do NOT use create_date for lead reporting or revenue date filtering — always use lead_date instead.",
+        "example_values": [
+          "range:2024-03-07 00:07:02 → 2026-03-09 18:52:20"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp of the most recent change to the processed lead record. Includes updates from reprocessing, credit actions, or manual adjustments.",
+        "example_values": [
+          "range:2025-10-22 18:51:18 → 2026-03-09 18:53:02"
+        ]
+      },
+      {
+        "name": "processed",
+        "type": "int",
+        "description": "Flag indicating whether the lead processing workflow completed. 1 = processing complete. Used for operational monitoring and cron processes."
+      }
+    ]
+  },
+  {
+    "table_name": "master_types",
+    "database_name": "franchises",
+    "purpose": "Master Types Lookup — Central lookup table for ALL status codes and type labels used across the entire system. Known categories and values: contract_status (3=Active, 4=Paused, 5=Expired, 6=Cancelled), customer_status.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Numeric identifier for a type value. IMPORTANT: the same integer id can appear multiple times in this table under different type_category groups. A JOIN on id alone without a type_category filter returns duplicate rows. Always filter: AND mt.type_category = '<relevant_category>'. Known categories: contract_status (3=Active, 4=Paused, 5=Expired, 6=Cancelled), customer_status."
+      },
+      {
+        "name": "type_name",
+        "type": "varchar(128)",
+        "description": "Internal machine-readable code for the type. Used within system logic and integrations. Not intended for display — use display_name instead. (Examples: contract_active, lead_fail, customer_paused)",
+        "example_values": [
+          "123rf",
+          "15_in_30",
+          "20_in_20",
+          "20_leads_ip",
+          "25_in_24",
+          "30_day_notice",
+          "3_plus_words",
+          "50_in_life",
+          "abandon_cart",
+          "absentee_ownership"
+        ]
+      },
+      {
+        "name": "type_category",
+        "type": "varchar(128)",
+        "description": "Groups related type entries, all entries sharing the same type_category belong to the same classification domain. You MUST filter on this column when resolving status integers from contracts or customers. Key values actually used: 'contract_status' (for contracts.status), 'customer_status' (for customers.status), 'lrq_reason' (for leads_all_business.failed_reason_id). Without this filter, a JOIN to master_types returns duplicate rows from multiple domains.",
+        "example_values": [
+          "account_origin_funnel",
+          "activation_reason",
+          "address",
+          "answer_type",
+          "bad_prospect_note",
+          "banner",
+          "bill_type",
+          "canned_message",
+          "cap",
+          "concept"
+        ]
+      },
+      {
+        "name": "display_name",
+        "type": "varchar(256)",
+        "description": "Human-readable label shown in reports and UI. ALWAYS use this column for output rather than the raw integer status ID or the internal type_name code. For contract status display: GROUP BY mt.display_name. For customer status display: mt.display_name. Never expose type_name or raw integer IDs to the user.",
+        "example_values": [
+          "Customer",
+          "Customer Response",
+          "Active",
+          "Inactive",
+          "Paused",
+          "Paused - Monthly Cap",
+          "Paused - Smoothing",
+          "Direct",
+          "Agency",
+          "Broker"
+        ]
+      },
+      {
+        "name": "FG",
+        "type": "tinyint",
+        "description": "Indicates whether the master type applies to the Franchise Gator site. 1 = applicable, 0 = not applicable."
+      },
+      {
+        "name": "FON",
+        "type": "tinyint",
+        "description": "Indicates whether the master type applies to the Franchise Opportunities Network. 1 = applicable."
+      },
+      {
+        "name": "FCN",
+        "type": "tinyint",
+        "description": "Indicates whether the master type applies to the Franchise.com Network. 1 = applicable."
+      },
+      {
+        "name": "BBN",
+        "type": "tinyint",
+        "description": "Indicates whether the master type applies to the BusinessBroker.net platform. 1 = applicable."
+      },
+      {
+        "name": "MYAC",
+        "type": "tinyint",
+        "description": "Indicates whether the master type applies to MyAccount related functionality. 1 = applicable."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp showing when the master type record was created.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-02-25 09:00:56"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp indicating when the master type record was last modified.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2026-02-25 09:00:56"
+        ]
+      }
+    ]
+  },
+  {
+    "table_name": "categories",
+    "database_name": "franchises",
+    "purpose": "Concept–Category Associations — Maps franchise concepts to their industry categories (e.g. Food, Automotive, Retail, Home Services). Use this table when: filtering concepts by category, finding what category a concept/brand belongs to, grouping leads or revenue by industry category, or listing concepts in a specific category.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [
+      {
+        "column": "concepts_id",
+        "references": "franchises.concepts(id)",
+        "cardinality": "N:1"
+      },
+      {
+        "column": "sites_categories_id",
+        "references": "franchises.sites_categories(id)",
+        "cardinality": "N:1"
+      }
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Primary key for the categories table. Each record represents a relationship between a concept and a category on a site."
+      },
+      {
+        "name": "concepts_id",
+        "type": "int",
+        "description": "References the concept associated with the category. Foreign key to franchises.concepts.id. Identifies which concept the category is assigned to.",
+        "example_values": [
+          "1 Coffee Source",
+          "1 Stop Pool Pros",
+          "1-1Jobs/National Hospitality Recruiting, Inc.",
+          "$1-2-3 Dollar",
+          "1-800 Flowers Franchising",
+          "1-800-DryClean",
+          "1-800-DryClean Franchising",
+          "1-800-Fixed-Up",
+          "1-800-GOT-JUNK?",
+          "1-800-GOT-MOLD?"
+        ]
+      },
+      {
+        "name": "sites_categories_id",
+        "type": "int",
+        "description": "References the category definition stored in franchises.sites_categories.id. This identifies the category that is linked to the concept and connects it to the site-specific category configuration.",
+        "example_values": [
+          "Automotive",
+          "Business Opportunities",
+          "Business Services",
+          "Canadian",
+          "Children's",
+          "Cleaning & Maintenance",
+          "Computer & Internet",
+          "Education",
+          "Food",
+          "Franchise Services"
+        ]
+      },
+      {
+        "name": "primary",
+        "type": "int",
+        "description": "Indicates whether this is the primary (main) category for the concept. 1 = primary category. 0 = additional/secondary category. A concept can have multiple category rows but only one primary. Use WHERE primary = 1 to get exactly one category per concept. The primary category value is stored in leads_all_business.category_id for lead-level category reporting."
+      },
+      {
+        "name": "display_site_id",
+        "type": "int",
+        "description": "Identifies the site where the concept and its categories are displayed. References sites_info.site_id. Determines which site the concept–category relationship applies to."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp indicating when the concept–category association record was created.",
+        "example_values": [
+          "range:2021-06-07 10:44:56 → 2026-03-09 17:59:21"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp showing the most recent update made to the record.",
+        "example_values": [
+          "range:2021-06-07 10:44:56 → 2026-03-09 17:59:21"
+        ]
+      },
+      {
+        "name": "is_deleted",
+        "type": "int",
+        "description": "Soft delete flag. 0 = concept–category association is active and should be used. 1 = record is marked as deleted. ALWAYS filter WHERE is_deleted = 0 when querying category associations."
+      }
+    ]
+  },
+  {
+    "table_name": "sites_categories",
+    "database_name": "franchises",
+    "purpose": "Site Category Definitions — Defines the category names and metadata for each site. This is the ONLY place category names (e.g. 'Food Franchises', 'Automotive Franchises', 'Home Services') are stored.",
+    "primary_keys": [
+      "id"
+    ],
+    "foreign_keys": [
+      {
+        "column": "site_id",
+        "references": "franchises.sites_info(site_id)",
+        "cardinality": "N:1"
+      }
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "description": "Primary key for the sites_categories table. Each record represents a category configured for a specific site. Referenced by franchises.categories.sites_categories_id."
+      },
+      {
+        "name": "site_id",
+        "type": "int",
+        "description": "References the site associated with the category. Links to franchises.sites_info.site_id. Identifies which site the category belongs to.",
+        "example_values": [
+          "Automotive Franchises",
+          "Business Broker",
+          "Business For Sale",
+          "Cleaning (app)",
+          "Food (app)",
+          "Food Franchises",
+          "FoodFranchise",
+          "Franchise Cost",
+          "Franchise Gator",
+          "Franchise Insights"
+        ]
+      },
+      {
+        "name": "category_id",
+        "type": "varchar(45)",
+        "description": "Identifier assigned to the category within the site. Generated based on site_id and used to uniquely identify the category within that site. Referenced by leads_all_business.category_id."
+      },
+      {
+        "name": "category_name",
+        "type": "varchar(45)",
+        "description": "The primary human-readable name for the category used to classify franchise concepts. This is the ONLY table with category display names. When joining from leads_all_business: JOIN franchises.sites_categories sc ON sc.category_id = lab.category_id AND sc.site_id = lab.site_id. When joining from franchises.categories: JOIN franchises.sites_categories sc ON sc.id = cat.sites_categories_id. SELECT sc.category_name for all category name output.",
+        "example_values": [
+          "Automotive",
+          "Business Opportunities",
+          "Business Services",
+          "Canadian",
+          "Children's",
+          "Cleaning & Maintenance",
+          "Computer & Internet",
+          "Education",
+          "Food",
+          "Franchise Services"
+        ]
+      },
+      {
+        "name": "title",
+        "type": "varchar(150)",
+        "description": "Visible title used for the category page — identifies the content for users and search engines.",
+        "example_values": [
+          "Automotive & Auto Parts Franchises for Sale",
+          "Business Opportunities For Sale",
+          "Business Services Franchises",
+          "Canada Franchise Opportunities For Sale",
+          "Children's Franchises for Sale",
+          "Cleaning Services Franchise Opportunities",
+          "Computer, Ecommerce & Internet Based Franchise Opportunities",
+          "Education Franchises",
+          "Food Franchises For Sale",
+          "Franchise Consulting Company Opportunities"
+        ]
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "description": "Short description explaining the content or purpose of the category page."
+      },
+      {
+        "name": "subcat_description",
+        "type": "text",
+        "description": "Description text used for subcategories associated with the category."
+      },
+      {
+        "name": "meta_title",
+        "type": "text",
+        "description": "Text used in the HTML title tag of the page. Shown in browser tabs and search engine results."
+      },
+      {
+        "name": "meta_description",
+        "type": "text",
+        "description": "Meta description for the page. Provides a summary of page content for search engines and social previews."
+      },
+      {
+        "name": "h1_title",
+        "type": "varchar(256)",
+        "description": "Primary heading displayed on the page. Describes the overall content of the category page."
+      },
+      {
+        "name": "top_html",
+        "type": "text",
+        "description": "HTML content added at the top of the search results page for the category. Allows additional content or formatting to be displayed above results."
+      },
+      {
+        "name": "bottom_html",
+        "type": "text",
+        "description": "HTML content added at the bottom of the category page. Allows additional descriptive content to appear after the main search results."
+      },
+      {
+        "name": "stylesheet_includes",
+        "type": "text",
+        "description": "Custom CSS stylesheet content used to style the category page."
+      },
+      {
+        "name": "js_includes",
+        "type": "text",
+        "description": "Custom JavaScript included for the category page. Controls page behavior or adds interactive elements."
+      },
+      {
+        "name": "create_date",
+        "type": "timestamp",
+        "description": "Timestamp when the category page configuration record was created.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2024-05-20 20:06:48"
+        ]
+      },
+      {
+        "name": "last_update",
+        "type": "timestamp",
+        "description": "Timestamp of the most recent modification to the category page.",
+        "example_values": [
+          "range:0000-00-00 00:00:00 → 2025-07-31 17:25:48"
+        ]
+      }
+    ]
+  }
+]

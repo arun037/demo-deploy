@@ -1,0 +1,15 @@
+/* Prevent page styles from affecting sidebar container */
+#analytics-sidebar-root {
+  all: initial;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+#analytics-sidebar-root * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure sidebar stays on top */
+#analytics-sidebar-root {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+}
