@@ -4,7 +4,10 @@
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
+const WS_BASE_URL =
+  window.location.protocol === 'https:'
+    ? `wss://${window.location.host}/api`
+    : `ws://${window.location.host}/api`;
 
 export const config = {
   // API Configuration
@@ -58,7 +61,7 @@ export const getApiUrl = (endpoint) => {
     reports: config.API.REPORTS_ENDPOINT,
     dashboard: config.API.DASHBOARD_ENDPOINT,
   };
-  return endpoints[endpoint] || `${config.API.BASE_URL}${endpoint}`;
+  return endpoints[endpoint] || `${config.API.BASE_URL}/${endpoint.replace(/^\/+/, '')}`;
 };
 
 export default config;

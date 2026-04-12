@@ -78,7 +78,7 @@ function Layout({ children }) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for busy servers
 
-        const response = await fetch(`${config.API.BASE_URL}/api/health`, {
+        const response = await fetch(`${config.API.BASE_URL}/health`, {
           signal: controller.signal
         });
 
