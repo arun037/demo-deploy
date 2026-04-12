@@ -10,14 +10,14 @@ export const config = {
   // API Configuration
   API: {
     BASE_URL: API_BASE_URL,
-    QUERY_ENDPOINT: `${API_BASE_URL}/api/query`,
-    QUERY_STREAM_ENDPOINT: `${API_BASE_URL}/api/query/stream`,
-    QUERY_CLARIFY_ENDPOINT: `${API_BASE_URL}/api/query/clarify`,
-    QUERY_CLARIFY_NEXT_ENDPOINT: `${API_BASE_URL}/api/query/clarify/next`,
-    REPORTS_ENDPOINT: `${API_BASE_URL}/api/reports`,
-    SESSIONS_ENDPOINT: `${API_BASE_URL}/api/sessions`,
-    DASHBOARD_ENDPOINT: `${API_BASE_URL}/api/dashboard`,
-    HISTORY_ENDPOINT: `${API_BASE_URL}/api/history`,
+    QUERY_ENDPOINT: `${API_BASE_URL}/query`,
+    QUERY_STREAM_ENDPOINT: `${API_BASE_URL}/query/stream`,
+    QUERY_CLARIFY_ENDPOINT: `${API_BASE_URL}/query/clarify`,
+    QUERY_CLARIFY_NEXT_ENDPOINT: `${API_BASE_URL}/query/clarify/next`,
+    REPORTS_ENDPOINT: `${API_BASE_URL}/reports`,
+    SESSIONS_ENDPOINT: `${API_BASE_URL}/sessions`,
+    DASHBOARD_ENDPOINT: `${API_BASE_URL}/dashboard`,
+    HISTORY_ENDPOINT: `${API_BASE_URL}/history`,
     WS_ENDPOINT: WS_BASE_URL,
   },
 
