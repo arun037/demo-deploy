@@ -80,8 +80,8 @@ class Config:
     MODEL_NAME = "google/gemini-2.5-flash"
     
     # Server Configuration
-    API_HOST = os.getenv("API_HOST")
-    API_PORT = int(os.getenv("API_PORT"))
+    API_HOST = os.getenv("API_HOST", "0.0.0.0")
+    API_PORT = int(os.getenv("API_PORT", "8000"))
     API_RELOAD = os.getenv("API_RELOAD").lower() == "true"
     CORS_ORIGINS = os.getenv("CORS_ORIGINS").split(",")
     
