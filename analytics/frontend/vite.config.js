@@ -17,10 +17,19 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173
+    port: 5173,
+
+    // ✅ ADD THIS
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      }
+    }
   },
   // Use relative paths for extension, but can work with '/' for web too
   base: process.env.EXTENSION_BUILD === 'true' ? './' : '/',
   envDir: '../'
 });
+
 
