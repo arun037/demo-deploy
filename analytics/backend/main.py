@@ -208,7 +208,7 @@ async def shutdown_event():
 async def root():
     return {"service": "SQL Swarm API", "status": "running"}
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
     try:
         tables = db_manager.get_table_names() if db_manager else []
