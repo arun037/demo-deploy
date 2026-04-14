@@ -1,12 +1,13 @@
 version: 0.0
 os: linux
+
 files:
   - source: /
-    destination: /var/www/cgh
-file_exists_behavior: OVERWRITE
+    destination: /var/www/analytics
+    overwrite: yes
 
 hooks:
+
   AfterInstall:
-    - location: shell_scripts/after_install.sh
-      timeout: 900
-      runas: root
+    - location: scripts/install_dependencies.sh
+      timeout: 600
