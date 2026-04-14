@@ -1,14 +1,7 @@
 #!/bin/bash
-
 set -e
 
-echo "Stopping backend service..."
-
-sudo systemctl stop analytics-backend || true
-
-
 APP_DIR=/var/www/analytics
-
 cd $APP_DIR
 
 echo "Setting up Python backend..."
@@ -19,12 +12,13 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "Deploying frontend build..."
+echo "Deploying frontend..."
 
-# React build already exists in frontend/dist
+if [ ! -d "frontend/dist" ]; then
+  echo "ERROR: dist not found!"
+  ls -la frontend/
+  exit 1
+fi
 
 sudo rm -rf /var/www/html/*
 cp -r frontend/dist/* /var/www/html/
-
-echo "Starting backend service..."
-sudo systemctl start analytics-backend || true
