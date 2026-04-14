@@ -3,7 +3,7 @@
  * Centralized environment variables and configuration
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const WS_BASE_URL =
   window.location.protocol === 'https:'
     ? `wss://${window.location.host}/api`

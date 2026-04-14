@@ -18,8 +18,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-
-    // ✅ ADD THIS
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
@@ -29,7 +28,6 @@ export default defineConfig({
   },
   // Use relative paths for extension, but can work with '/' for web too
   base: process.env.EXTENSION_BUILD === 'true' ? './' : '/',
-  envDir: '../'
 });
 
 
