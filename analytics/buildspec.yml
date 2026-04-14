@@ -17,12 +17,14 @@ phases:
   post_build:
     commands:
       - echo "Verifying build output..."
-      - ls -la analytics/frontend/dist
+      - pwd
+      - ls -la
+      - ls -la dist   # ✅ FIXED
 
 artifacts:
   files:
     - analytics/frontend/dist/**/*
     - analytics/backend/**/*
     - analytics/requirements.txt
-    - appspec.yml
+    - analytics/appspec.yml   # ✅ FIXED
     - scripts/**/*
