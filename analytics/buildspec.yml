@@ -5,17 +5,24 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
+      - echo "Installing frontend dependencies..."
       - cd analytics/frontend
       - npm ci
 
   build:
     commands:
+      - echo "Building React app..."
       - npm run build
 
   post_build:
     commands:
-      - echo "Frontend build completed"
+      - echo "Verifying build output..."
+      - ls -la analytics/frontend/dist
 
 artifacts:
   files:
-    - '**/*'
+    - analytics/frontend/dist/**/*
+    - analytics/backend/**/*
+    - analytics/requirements.txt
+    - appspec.yml
+    - scripts/**/*
