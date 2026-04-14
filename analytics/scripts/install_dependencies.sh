@@ -22,7 +22,9 @@ pip install -r requirements.txt
 echo "Deploying frontend build..."
 
 # React build already exists in frontend/dist
+
 sudo rm -rf /var/www/html/*
-cp -r analytics/frontend/dist/* /var/www/html/
-#
+cp -r frontend/dist/* /var/www/html/
+
+echo "Starting backend service..."
 sudo systemctl start analytics-backend || true
