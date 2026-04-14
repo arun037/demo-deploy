@@ -2,12 +2,10 @@ version: 0.0
 os: linux
 
 files:
-  - source: /
+  - source: analytics/
     destination: /var/www/analytics
-    overwrite: yes
 
 hooks:
-
-  AfterInstall:
-    - location: scripts/install_dependencies.sh
-      timeout: 600
+  BeforeInstall:
+    - location: analytics/scripts/install_dependencies.sh
+      timeout: 300

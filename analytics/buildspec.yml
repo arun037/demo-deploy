@@ -27,4 +27,4 @@ artifacts:
     - analytics/backend/**/*
     - analytics/requirements.txt
     - analytics/appspec.yml   # ✅ FIXED
-    - scripts/**/*
+    - analytics/scripts/**/*
