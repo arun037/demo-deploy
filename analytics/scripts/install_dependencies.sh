@@ -23,7 +23,6 @@ echo "Deploying frontend build..."
 
 # React build already exists in frontend/dist
 sudo rm -rf /var/www/html/*
-sudo cp -r frontend/dist/* /var/www/html/
-
+cp -r analytics/frontend/dist/* /var/www/html/
 #
 sudo systemctl start analytics-backend || true
