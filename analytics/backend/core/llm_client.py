@@ -128,12 +128,10 @@ class LLMClient:
         
         # Default log file
         if log_file is None:
-            log_file = "logs/llm_usage.csv"
+        log_dir = os.getenv("LOG_DIR", "/var/log/analytics")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, "llm_usage.csv")
         
-        # Ensure logs directory exists
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
         
         # Check if file exists to determine if we need to write header
         file_exists = os.path.exists(log_file)

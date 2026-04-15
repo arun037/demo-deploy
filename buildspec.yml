@@ -10,6 +10,8 @@ phases:
 
   build:
     commands:
+      - echo "Using API URL: $VITE_API_URL"
+      - export VITE_API_URL=$VITE_API_URL
       - npm run build
 
 artifacts:

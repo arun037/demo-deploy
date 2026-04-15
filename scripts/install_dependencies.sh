@@ -12,13 +12,21 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "Deploying frontend..."
+echo "backend permissions."
+sudo chown -R ubuntu:ubuntu /var/www/analytics
+sudo chmod -R 755 /var/www/analytics
 
-if [ ! -d "frontend/dist" ]; then
-  echo "ERROR: dist not found!"
-  ls -la frontend/
-  exit 1
-fi
+echo "log directory"
+sudo mkdir -p /var/log/analytics
+sudo chown -R ubuntu:ubuntu /var/log/analytics
+sudo chmod -R 775 /var/log/analytics
+
+echo "Deploying frontend..."
 
 sudo rm -rf /var/www/html/*
 cp -r frontend/dist/* /var/www/html/
+
+echo "frontend permissions"
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 755 /var/www/html
+
